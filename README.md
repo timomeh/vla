@@ -185,7 +185,7 @@ test("returns some user settings", async () => {
     ),
   )
 
-  await expect(kernel.create(UsersController).show("1")).resolves.toEqual({
+  await expect(kernel.create(UserSettingsController).show("1")).resolves.toEqual({
     timezone: "faked",
     hasSubscription: true
   })
