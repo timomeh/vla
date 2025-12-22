@@ -6,10 +6,14 @@ A TypeScript data layer kernel for backend- and fullstack apps. Compatible with 
 
 - Dependency Injection without decorators and without reflection
 - Works in any server-side framework
+- Write code that's easy to test without module mocks all over the place
 - Structures code into modules, layers and interfaces
 - Familiar Controllers, Services, Repos, Facades
 - Ensures that Facades are used for cross-module dependencies to prevent messy code dependencies
 - Tree shakeable
+- 🏗️ request-based invoke helpers with AsyncLocalStorage
+- 🏗️ first-class context injection
+- ...
 
 ## Usage
 
@@ -37,7 +41,7 @@ class UserService extends UserModule.Service {
   ctx = this.inject(Context) // WIP unimplemented
 
   async getSettings(userId: string) {
-    canViewProfile(userId)
+    await canViewProfile(userId)
 
     const profile = await this.repo.findById(userId)
     const hasSubscription = await this.billing.hasSubscription(userId)
