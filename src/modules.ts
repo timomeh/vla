@@ -1,5 +1,6 @@
 import { tokenizedDependency } from "./dependencies"
-import { getRootKernel, Kernel } from "./kernel"
+import { getGlobalKernel, Kernel } from "./kernel"
+import { Memoizable } from "./memo"
 import type { InstantiableClass, Scope } from "./types"
 
 export const BRAND = Symbol("_capsel_brand")
@@ -73,7 +74,7 @@ export function createModule<const ModuleName extends string>(
     static readonly [BRAND] = new ClassBrand(moduleName, "service")
     static scope: Scope = "invoke"
   }
-  abstract class Repo extends BaseClass {
+  abstract class Repo extends Memoizable(BaseClass) {
     static readonly [BRAND] = new ClassBrand(moduleName, "repo")
     static scope: Scope = "invoke"
   }
@@ -90,7 +91,7 @@ export function createModule<const ModuleName extends string>(
       this: new () => TAction,
       ...args: Parameters<TAction["handle"]>
     ): TResult {
-      const kernel = getRootKernel() || new Kernel()
+      const kernel = getGlobalKernel() || new Kernel()
       const scoped = kernel.scoped()
       // biome-ignore lint/complexity/noThisInStatic: it's fine
       const instance = scoped.create(this)

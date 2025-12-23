@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      object-hash:
+        specifier: ^3.0.0
+        version: 3.0.0
     devDependencies:
       '@biomejs/biome':
         specifier: 2.3.10
@@ -14,6 +18,9 @@ importers:
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
+      '@types/object-hash':
+        specifier: ^3.0.6
+        version: 3.0.6
       bumpp:
         specifier: ^10.3.2
         version: 10.3.2
@@ -498,6 +505,9 @@ packages:
   '@types/node@25.0.3':
     resolution: {integrity: sha512-W609buLVRVmeW693xKfzHeIV6nJGGz98uCPfeXI1ELMLXVeKYZ9m15fAMSaUPBHYLGFsVRcMmSCksQOrZV9BYA==}
 
+  '@types/object-hash@3.0.6':
+    resolution: {integrity: sha512-fOBV8C1FIu2ELinoILQ+ApxcUKz4ngq+IWUYrxSGjXzzjUALijilampwkMgEtJ+h2njAW3pi853QpzNVCHB73w==}
+
   '@vitest/expect@4.0.16':
     resolution: {integrity: sha512-eshqULT2It7McaJkQGLkPjPjNph+uevROGuIMJdG3V+0BSR2w9u6J9Lwu+E8cK5TETlfou8GRijhafIMhXsimA==}
 
@@ -680,6 +690,10 @@ packages:
     resolution: {integrity: sha512-7eM+hpOtrKrBDCh7Ypu2lJ9Z7PNZBdi/8AT3AX8xoCj43BBVHD0hPSTEvMtkMpfs8FCqBGhxB+uToIQimA111g==}
     engines: {node: ^14.16.0 || >=16.10.0}
     hasBin: true
+
+  object-hash@3.0.0:
+    resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
+    engines: {node: '>= 6'}
 
   obug@2.1.1:
     resolution: {integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==}
@@ -1230,6 +1244,8 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
+  '@types/object-hash@3.0.6': {}
+
   '@vitest/expect@4.0.16':
     dependencies:
       '@standard-schema/spec': 1.1.0
@@ -1425,6 +1441,8 @@ snapshots:
       pathe: 2.0.3
       pkg-types: 2.3.0
       tinyexec: 1.0.2
+
+  object-hash@3.0.0: {}
 
   obug@2.1.1: {}
 

@@ -13,14 +13,14 @@ type Binding<T = unknown> = {
   scope: Scope
 }
 
-let rootKernel: Kernel | null = null
+let globalKernel: Kernel | null = null
 
-export function setRootKernel(kernel: Kernel) {
-  rootKernel = kernel
+export function setGlobalKernel(kernel: Kernel) {
+  globalKernel = kernel
 }
 
-export function getRootKernel() {
-  return rootKernel
+export function getGlobalKernel() {
+  return globalKernel
 }
 
 export class Kernel {
@@ -84,7 +84,7 @@ export class Kernel {
   }
 
   setGlobal() {
-    setRootKernel(this)
+    setGlobalKernel(this)
   }
 
   create<T>(cls: Ctor<T>) {

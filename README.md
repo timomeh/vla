@@ -11,14 +11,15 @@ A TypeScript data layer kernel for backend- and fullstack apps. Compatible with 
 - Familiar patterns: Actions, Services, Repos, Facades
 - Ensures that Facades are used for cross-module dependencies to prevent messy code dependencies
 - Tree shakeable
-- 🏗️ request-based invoke helpers with AsyncLocalStorage
+- Memoziation for Repos
+- 🏗️ request-based context with AsyncLocalStorage
 - 🏗️ first-class context injection
 - ...
 
 ## Usage
 
 ```ts
-import { createModule, Kernel, setRootKernel } from "capsel"
+import { createModule, Kernel } from "capsel"
 
 // Users
 const UserModule = createModule("User")
@@ -67,8 +68,26 @@ class UserService extends UserModule.Service {
 }
 
 class UserRepo extends UserModule.Repo {
-  async findById(id: string) {
+  findById = this.memo((id: string) => {
+    // this method is memoized per request.
+    // memoized methods can be called like any normal method, but
+    // if it's called multiple times with the same args, it's only
+    // executed once and the result is cached
     return db.users.find({ id })
+  })
+
+  async create(data: UserValues) {
+    const createdUser = await db.users.create({ data })
+
+    this.findById.prime(createUser.id).value(createdUser)
+    // memoized methods support multiple utilities:
+    // .fresh(args) to skip memoized cache and execute the function again
+    // .prime(args).value({ ... }) to set a cached value
+    // .preload(args) to run the method in the background and preload the cache
+    // .bust(args) to bust the cache for the provided args
+    // .bustAll() to bust the cache for all args
+
+    return createdUser
   }
 }
 
@@ -90,8 +109,8 @@ class BillingRepo extends BillingModule.Repo {
   }
 }
 
-const kernel = new Kernel() // global instance
-kernel.setGlobal()
+const kernel = new Kernel()
+kernel.setGlobal() // global instance
 
 const settings = await ShowUserSettingsAction.invoke(userId)
 // -> { timezone: 'GMT+1', hasSubscription: true }

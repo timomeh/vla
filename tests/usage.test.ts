@@ -9,9 +9,9 @@ const users: Record<string, { id: string; name: string }> = {
 const Users = createModule("Users")
 
 class UserRepo extends Users.Repo {
-  async findById(id: string) {
+  findById = this.memo((id: string) => {
     return users[id]
-  }
+  })
 }
 
 class UserService extends Users.Service {
