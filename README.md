@@ -57,7 +57,7 @@ class UserService extends UserModule.Service {
     const isSameUser = this.ctx.currentUser.id !== userId
     if (!isSameUser) throw new Forbidden()
 
-    // repo method calls are memoized - WIP unimplemented
+    // repo method calls are memoized
     const profile = await this.repo.findById(userId)
     const isTeamAdmin =
       this.ctx.currentUser.role === "admin" &&
