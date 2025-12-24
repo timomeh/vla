@@ -340,7 +340,9 @@ class FooService extends MyModule.Service {
 }
 ```
 
-This will use a transient version of the FooRepo, and
+This will use a transient version of the FooRepo only for the `FooService`. Meaning this service won't share the same cached version that other services might be using.
+
+It's not something you'll likely need to use at all. But this shows how the scope defines how long the instance should be cached and shared.
 
 ### Base classes
 
