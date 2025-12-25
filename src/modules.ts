@@ -7,7 +7,7 @@ import type { InstantiableClass, Scope } from "./types"
 export const BRAND = Symbol("_vla_brand")
 export const TOKEN = Symbol("_vla_token")
 
-type Layer = "facade" | "service" | "repo" | "action" | "other"
+type Layer = "facade" | "service" | "repo" | "action" | "resource" | "other"
 
 type Branded<ModuleName extends string, LayerName extends Layer> = {
   readonly [BRAND]: ClassBrand<ModuleName, LayerName>
@@ -115,6 +115,10 @@ export function createModule<const ModuleName extends string>(
       }
     }
   }
+  abstract class Resource extends BaseClass {
+    static readonly [BRAND] = new ClassBrand(moduleName, "resource")
+    static scope: Scope = "singleton"
+  }
   abstract class Singleton extends BaseClass {
     static readonly [BRAND] = new ClassBrand(moduleName, "other")
     static scope: Scope = "singleton"
@@ -130,6 +134,7 @@ export function createModule<const ModuleName extends string>(
     Service,
     Repo,
     Action,
+    Resource,
     Singleton,
     Class,
   }

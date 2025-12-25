@@ -348,11 +348,15 @@ It's not something you'll likely need to use at all. But this shows how the scop
 
 ### Base classes
 
-Vla gives you multiple base classes to choose from. You can use them as they are or extend them for your own custom base classes.
+Vla gives you multiple base classes with semantic names. You can use them as they are, or extend them for your own custom base classes.
 
-- `Class` is a generic class with scope `transient`
-- `Singleton` is a `Class` with scope `singleton`
-- `Service` is a `Class` with scope `invoke`
-- `Repo` is a `Memoizable(Class)` with scope `invoke`
-- `Facade` is a named alias for `Class`
-- `Action` is a special class with scope `transient`, where you implement a `handle()` function.
+- `Service` for services, for reusable units of code (scope: `invoke`)
+- `Repo` for respositories, for data access and external adapters (scope: `invoke`)
+- `Action` for actions, for server-side entry points (scope: `transient`)
+- `Resource` for long-lived infrastructure clients such as database pools (scope: `singleton`)
+- `Facade` for the interface of a module for cross-module access (scope: `transient`)
+
+Additionally there are 2 generic classes without a semantic meaning:
+
+- `Class` as a base class which can be extended and modified (default scope: `transient`)
+- `Singleton` as a class for singletons without a semantic name (scope: `singleton`)
