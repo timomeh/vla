@@ -87,6 +87,18 @@ test("uses kernel from currentFn", async () => {
   })
 
   expect(findMock).toHaveBeenCalledTimes(2)
+  expect.assertions(9)
 })
 
-expect.assertions(9)
+test("supports async setter", async () => {
+  setCurrentKernelFn(async () => {
+    await Promise.resolve()
+    return currentKernel
+  })
+
+  currentKernel = new Kernel().scoped()
+  await expect(ShowUserAction.invoke("1")).resolves.toEqual({
+    id: "1",
+    name: "John",
+  })
+})

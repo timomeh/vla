@@ -1,49 +1,15 @@
 import { tokenizedDependency } from "./dependencies"
 import type { Kernel } from "./kernel"
 import { getInvokeKernel } from "./kernel-invoke"
+import {
+  type AllowedDependency,
+  BRAND,
+  ClassBrand,
+  isAllowedLayerInject,
+  type ModuleClass,
+} from "./layers"
 import { Memoizable } from "./memo"
-import type { InstantiableClass, Resolved, Scope } from "./types"
-
-export const BRAND = Symbol("_vla_brand")
-export const TOKEN = Symbol("_vla_token")
-
-type Layer = "facade" | "service" | "repo" | "action" | "resource" | "other"
-
-type Branded<ModuleName extends string, LayerName extends Layer> = {
-  readonly [BRAND]: ClassBrand<ModuleName, LayerName>
-}
-type Scoped = {
-  readonly scope: Scope
-}
-type ModuleClass<
-  ModuleName extends string,
-  LayerName extends Layer = Layer,
-> = InstantiableClass<unknown> &
-  Branded<ModuleName, LayerName> &
-  Scoped & {
-    readonly unwrap?: PropertyKey
-  }
-
-type LayerOf<T> = T extends ModuleClass<string, infer L> ? L : never
-type ForbiddenCrossModuleClass = ModuleClass<
-  string,
-  Exclude<Layer, "facade" | "resource">
->
-type AllowedDependency<
-  ModuleName extends string,
-  Key,
-> = Key extends ModuleClass<ModuleName, Layer>
-  ? Key
-  : Key extends ForbiddenCrossModuleClass
-    ? `Cross-module ${Capitalize<LayerOf<Key>>} injection is not allowed. Use a Facade.`
-    : Key
-
-class ClassBrand<ModuleName extends string, LayerName extends Layer> {
-  constructor(
-    readonly moduleName: ModuleName,
-    readonly layerName: LayerName,
-  ) {}
-}
+import type { Resolved, Scope } from "./types"
 
 export function createModule<const ModuleName extends string>(
   moduleName: ModuleName,
@@ -54,7 +20,7 @@ export function createModule<const ModuleName extends string>(
   ): Resolved<TKey> {
     if (
       key[BRAND].moduleName !== moduleName &&
-      key[BRAND].layerName !== "facade"
+      !isAllowedLayerInject(key[BRAND].layerName)
     ) {
       throw new Error(
         `Cross-module ${key[BRAND].layerName} dependency is not allowed.` +
@@ -92,14 +58,14 @@ export function createModule<const ModuleName extends string>(
 
     abstract handle(...args: unknown[]): unknown | Promise<unknown>
 
-    static invoke<
+    static async invoke<
       TAction extends Action,
       TResult = ReturnType<TAction["handle"]>,
     >(
       this: new () => TAction,
       ...args: Parameters<TAction["handle"]>
-    ): TResult {
-      const kernel = getInvokeKernel()
+    ): Promise<TResult> {
+      const kernel = await getInvokeKernel()
       // biome-ignore lint/complexity/noThisInStatic: it's fine
       const instance = kernel.create(this)
       return instance.handle(...args) as TResult
@@ -112,9 +78,9 @@ export function createModule<const ModuleName extends string>(
       // biome-ignore lint/complexity/noThisInStatic: it's fine
       const ActionClass = this
       return {
-        invoke<TResult = ReturnType<TAction["handle"]>>(
+        async invoke<TResult = ReturnType<TAction["handle"]>>(
           ...args: Parameters<TAction["handle"]>
-        ): TResult {
+        ): Promise<TResult> {
           const scoped = kernel.scoped()
           const instance = scoped.create(ActionClass)
           return instance.handle(...args) as TResult

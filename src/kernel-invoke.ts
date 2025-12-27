@@ -3,9 +3,9 @@ import { getAlsKernel } from "./kernel-als"
 import { getCurrentKernelFromFn } from "./kernel-current"
 import { getGlobalKernel } from "./kernel-global"
 
-export function getInvokeKernel() {
+export async function getInvokeKernel() {
   return (
-    getCurrentKernelFromFn() ??
+    (await getCurrentKernelFromFn()) ??
     getAlsKernel() ??
     getGlobalKernel()?.scoped() ??
     new Kernel()

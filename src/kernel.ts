@@ -46,6 +46,11 @@ export class Kernel {
     this.bindings.set(key, { kind: "value", value, scope })
   }
 
+  context<TKey extends Token>(key: TKey, value: Resolved<TKey>) {
+    this.bindValue(key, value, "invoke")
+    return this
+  }
+
   resolve<T>(key: Token<T>, scope?: Scope): T {
     const binding = this.getBinding(key)
 

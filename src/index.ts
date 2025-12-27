@@ -1,3 +1,4 @@
+export { createContext } from "./context"
 export { Kernel } from "./kernel"
 export { runWithKernel } from "./kernel-als"
 export { setCurrentKernelFn } from "./kernel-current"

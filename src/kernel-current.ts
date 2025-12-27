@@ -1,12 +1,12 @@
 import type { Kernel } from "./kernel"
 
-type CurrentKernelFn = () => Kernel
+type CurrentKernelFn = () => Kernel | Promise<Kernel>
 let currentKernelFn: CurrentKernelFn | null = null
 
 export function setCurrentKernelFn(fnKernel: CurrentKernelFn) {
   currentKernelFn = fnKernel
 }
 
-export function getCurrentKernelFromFn() {
-  return currentKernelFn?.()
+export async function getCurrentKernelFromFn() {
+  return currentKernelFn ? await currentKernelFn() : undefined
 }

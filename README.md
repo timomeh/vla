@@ -15,7 +15,7 @@ A TypeScript data layer kernel for backend- and fullstack apps. Compatible with 
 - Tree shakeable
 - Memoziation for Repos
 - request-based context with AsyncLocalStorage
-- 🏗️ first-class context injection
+- first-class context injection
 - ...
 
 ## Why?
@@ -25,7 +25,7 @@ Many fullstack frameworks lack structure and conventions on the backend side (da
 ## Usage
 
 ```ts
-import { createModule, Kernel } from "vla"
+import { Kernel, createModule, createContext, setGlobalKernel } from "vla"
 
 // Users
 const UserModule = createModule("User")
@@ -45,7 +45,7 @@ class ShowUserSettingsAction extends UserModule.Action {
 class UserService extends UserModule.Service {
   repo = this.inject(UserRepo)
   billing = this.inject(BillingFacade)
-  ctx = this.inject(Context) // WIP unimplemented
+  session = this.inject(SessionFacade)
 
   async getSettings(userId: string) {
     await canViewProfile(userId)
@@ -59,17 +59,29 @@ class UserService extends UserModule.Service {
     }
   }
 
-  private canViewProfile(userId: string) {
+  private async canViewProfile(userId: string) {
     const isSameUser = this.ctx.currentUser.id !== userId
     if (!isSameUser) throw new Forbidden()
 
     // repo method calls are memoized
     const profile = await this.repo.findById(userId)
+    const currentUser = await this.session.currentUser()
     const isTeamAdmin =
-      this.ctx.currentUser.role === "admin" &&
-      this.ctx.currentUser.teamId === profile.teamId
+      currentUser.role === "admin" &&
+      currentUser.teamId === profile.teamId
 
     if (!isTeamAdmin) throw new Forbidden()
+  }
+}
+
+class SessionFacade extends UserModule.Facade {
+  ctx = this.inject(ReqContext)
+  repo = this.inject(UserRepo)
+
+  async currentUser() {
+    const currentUserId = cookies.userId
+    const user = await this.repo.findById(currentUserId)
+    return user
   }
 }
 
@@ -130,8 +142,14 @@ class BillingRepo extends BillingModule.Repo {
   }
 }
 
+// Supports injecting context
+const ReqContext = createContext<{ cookies: Record<string, unknown> }>()
+
 const kernel = new Kernel()
-kernel.setGlobal() // global instance
+setGlobalKernel(kernel) // define as global instance
+
+// just an example. you should use a scoped context instead (see below)
+kernel.context(ReqContext, { cookies: req.cookies })
 
 const settings = await ShowUserSettingsAction.invoke(userId)
 // -> { timezone: 'GMT+1', hasSubscription: true }
@@ -146,9 +164,15 @@ import { kernel } from '@/data/kernel'
 
 const kernel = new Kernel()
 
-// React's cache() will return a new scoped kernel for each request, giving
-// us a new scoped kernel per request without a middleware
-setCurrentKernelFn(cache(() => kernel.scoped()))
+// React's cache() will return a new scoped kernel for each request
+setCurrentKernelFn(cache(() => {
+  return kernel
+    .scoped()
+    .context(ReqContext, {
+      // you can either use await cookies() here or await the promise in Vla
+      cookies: cookies()
+    })
+}))
 
 async function Layout() {
   const settings = await ShowUserSettingsAction.invoke(userId)
@@ -253,7 +277,11 @@ A module can have multiple services, repositories and even multiple facades to s
 
 ### What's a facade, when to use it?
 
-Facades are meant as the internal public API to a module, for other modules. When one module wants to call something from another module, it should do so through a facade, and not by deeply calling a service or repository of a module. Even though this adds a layer of indirection, it lets you better differentiate between internal and external concerns of a module, and prevents code dependencies from becoming messy. If you use facades excessively often, your domain modelling could be improved.
+Facades are meant as the internal public API to a module, for other modules.
+
+When one module wants to use something from another module, it should do so by loading a facade, and not by deeply calling a service or repository of a module. Even though this adds a layer of indirection, it lets you better differentiate between internal and external concerns of a module, and prevents code dependencies from becoming messy. If you use facades excessively often, your domain modelling could be improved.
+
+Vla prevents that any module can deeply inject any arbitrary class from another module. It only allows injecting Resources and Facades from other modules.
 
 ### How should I structure files and folders?
 
