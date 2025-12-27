@@ -1,12 +1,12 @@
 import { beforeEach, expect, test, vi } from "vitest"
-import { createModule, Kernel, runWithKernel } from "../src"
+import { Kernel, Vla } from "../src"
 
 const users: Record<string, { id: string; name: string }> = {
   "1": { id: "1", name: "John" },
   "2": { id: "2", name: "Jane" },
 }
 
-const Users = createModule("Users")
+const Users = Vla.createModule("Users")
 
 const findMock = vi.fn(async (id: string) => {
   return users[id]
@@ -39,7 +39,7 @@ beforeEach(() => {
 const kernel = new Kernel()
 
 test("uses kernel from AsyncLocalStorage", async () => {
-  await runWithKernel(kernel.scoped(), async () => {
+  await Vla.withKernel(kernel.scoped(), async () => {
     await expect(ShowUserAction.invoke("1")).resolves.toEqual({
       id: "1",
       name: "John",
@@ -62,7 +62,7 @@ test("uses kernel from AsyncLocalStorage", async () => {
     ),
   )
 
-  await runWithKernel(anotherScopedKernel, async () => {
+  await Vla.withKernel(anotherScopedKernel, async () => {
     await expect(ShowUserAction.invoke("1")).resolves.toEqual({
       id: "1",
       name: "Faked",
@@ -76,7 +76,7 @@ test("uses kernel from AsyncLocalStorage", async () => {
     expect(findMock).toHaveBeenCalledTimes(1)
   })
 
-  await runWithKernel(kernel.scoped(), async () => {
+  await Vla.withKernel(kernel.scoped(), async () => {
     await expect(ShowUserAction.invoke("1")).resolves.toEqual({
       id: "1",
       name: "John",

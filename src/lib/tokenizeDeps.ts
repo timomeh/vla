@@ -13,7 +13,7 @@ export function tokenizedDependency<
   return new UnresolvedDependency(defaultClass, scope)
 }
 
-export function getInjectionPoint(v: unknown) {
+export function getTokenizedDependency(v: unknown) {
   if (v instanceof UnresolvedDependency) return v
   return null
 }

@@ -18,3 +18,19 @@ export type Resolved<TKey extends Token> = [UnwrapKey<TKey>] extends [never]
   : UnwrapKey<TKey> extends keyof InstanceType<TKey>
     ? InstanceType<TKey>[UnwrapKey<TKey>]
     : InstanceType<TKey>
+
+export type Layer = "service" | "repo" | "action" | "resource" | "context"
+export type Visibility = "public" | "private" | "global" | "module"
+
+export type ModuleClass<
+  ModuleName extends string,
+  LayerName extends Layer = Layer,
+  TVisibility extends Visibility = Visibility,
+> = InstantiableClass<unknown> & {
+  readonly __vla_layer: LayerName
+  readonly __vla_module: ModuleName
+  readonly __vla_visibility: TVisibility
+  readonly scope: Scope
+  readonly unwrap?: PropertyKey
+  readonly parentLayers: readonly Layer[]
+}

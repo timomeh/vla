@@ -84,7 +84,5 @@ export function Memoizable<TBase extends BaseCtor>(Base: TBase) {
     }
   }
 
-  return MemoizableBase as unknown as abstract new (
-    ...args: ConstructorParameters<TBase>
-  ) => InstanceType<TBase> & MemoCapable
+  return MemoizableBase as unknown as typeof MemoizableBase & TBase
 }

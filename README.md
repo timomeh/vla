@@ -25,10 +25,14 @@ Many fullstack frameworks lack structure and conventions on the backend side (da
 ## Usage
 
 ```ts
-import { Kernel, createModule, createContext, setGlobalKernel } from "vla"
+import { Kernel, Vla } from "vla"
 
-// Users
-const Users = createModule("Users")
+// Create a Users module.
+// Modules are optional and helpful for larger apps.
+// Smaller apps might only need a single module.
+// You can use the provided `Vla.Action`, `Vla.Service` etc as shortcuts
+// instead of creating your own module
+const Users = Vla.createModule("Users")
 
 class ShowUserSettings extends Users.Action {
   users = this.inject(UserService)
@@ -74,7 +78,7 @@ class UserService extends Users.Service {
   }
 }
 
-class SessionFacade extends Users.Facade {
+class SessionFacade extends Users.Service {
   ctx = this.inject(ReqContext)
   repo = this.inject(UserRepo)
 
@@ -111,7 +115,7 @@ class UserRepo extends Users.Repo {
   }
 }
 
-class Database extends UserModule.Resource {
+class Database extends Vla.Resource {
   static override unwrap = "db"
   // Unwraps a property when injecting the resource:
   // When another class injects the database with `this.inject(Database)`,
@@ -120,12 +124,12 @@ class Database extends UserModule.Resource {
   // This prevents that you have to write stuff like `this.db.db.find()`
 
   // `Resource` classes are singletons,
-  // so the client will only be initialized once
+  // so the client this will only be initialized once
   db = new DbClient()
 }
 
 // Billing
-const Billing = createModule("Billing")
+const Billing = Vla.createModule("Billing")
 
 class BillingFacade extends Billing.Facade {
   repo = this.inject(BillingRepo)
@@ -143,10 +147,10 @@ class BillingRepo extends BillingModule.Repo {
 }
 
 // Supports injecting context
-const ReqContext = createContext<{ cookies: Record<string, unknown> }>()
+const ReqContext = Vla.createContext<{ cookies: Record<string, unknown> }>()
 
 const kernel = new Kernel()
-setGlobalKernel(kernel) // define as global instance
+Vla.setGlobalInvokeKernel(kernel) // define as global instance
 
 // just an example. you should use a scoped context instead (see below)
 kernel.context(ReqContext, { cookies: req.cookies })
@@ -159,13 +163,13 @@ const settings = await ShowUserSettings.invoke(userId)
 
 ```tsx
 import { cache } from 'react'
-import { setCurrentKernelFn } from 'vla'
+import { Vla } from 'vla'
 import { kernel } from '@/data/kernel'
 
 const kernel = new Kernel()
 
 // React's cache() will return a new scoped kernel for each request
-setCurrentKernelFn(cache(() => {
+Vla.setInvokeKernelProvider(cache(() => {
   return kernel
     .scoped()
     .context(ReqContext, {
@@ -198,12 +202,12 @@ async function Page() {
 e.g. sveltekit
 
 ```ts
-import { runWithScope } from "vla"
+import { Vla } from "vla"
 import type { Handle } from "@sveltejs/kit"
 import { kernel } from '@/data/kernel'
 
 export const handle: Handle = async ({ event, resolve }) => {
-  return runWithScope(kernel.scoped(), () => resolve(event))
+  return Vla.withKernel(kernel.scoped(), () => resolve(event))
 }
 
 import { kernel } from '@/data/kernel';
@@ -219,15 +223,15 @@ export const load: PageServerLoad = async ({ params }) => {
 e.g. express
 
 ```ts
-import { runWithScope } from "vla"
+import { Vla } from "vla"
 import { kernel } from '@/data/kernel'
 
 const app = express()
 
 express.use((req, res, next) => {
   const scope = kernel.scoped().context(CustomContext, { req })
-  return runWithScope(scope, () => next()))
-}
+  return Vla.withKernel(scope, () => next())
+})
 
 app.get("/users/:id", async (req, res) => {
   const settings = await ShowUserSettings.invoke(req.params.id)
@@ -280,9 +284,9 @@ There aren't any docs yet. This section is just jotting down some notes for myse
 
 ### When to use modules?
 
-You don't need to create a module for each separate resource. Modules are meant for domain separation, not necessarily for resources. Smaller apps may just need a single `AppModule`. Start with a single AppModule and grow.
+You don't need to create a module for each separate resource. Modules are meant for domain separation, not necessarily for resources. A module can have multiple services, repositories and even multiple facades to separate resources from each other.
 
-A module can have multiple services, repositories and even multiple facades to separate resources from each other.
+Smaller apps may just need a single module for the whole app. You can use `Vla.Action`, `Vla.Repo`, `Vla.Service` etc as a shortcut.
 
 ### What's a facade, when to use it?
 
@@ -298,10 +302,7 @@ Roughly follow how Vla structures your code:
 
 - Use separate folders for separate modules
 - Create a separate file for each Service, Repo, Facade, Action
-- You could also have all actions of a resource in a single file
-- If you further want to group files inside a module, do it either by resource (`user`, `post`, etc) or by type (`services`, `repos`, `actions`, etc). Start by having a flat hierarchy with all files of a module in a single folder, and separate into multiple folders once you feel it grew too much.
-
-If you use multiple modules, it's good to separate them into different folders. This allows you to see: if you're importing unproportionally many files from other folders, you have lots of cross-module dependencies, and your data modelling into modules could be improved. 
+- If you further want to group files inside a module, do it either by resource (`user`, `post`, etc) or by type (`services`, `repos`, `actions`, etc). Start by having a flat hierarchy with all files of a module in a single folder, and separate into multiple folders once you feel it grows too much.
 
 "How to structure code into files and folders" is often a question of how to manage code dependencies in a way that scales well. Vla's structure already manages your code dependencies, so it makes sense to align your files and folders on Vla's structure.
 
@@ -318,8 +319,9 @@ There are 3 different scopes:
 Example:
 
 ```ts
-class DatabasePool extends MyModule.Singleton {
-  // singletons are cached globally
+class DatabasePool extends MyModule.Resource {
+  // Resources are Singletons.
+  // Singletons are cached globally
   private dbPool: DbPool | null = null
 
   get dbPool() {
@@ -328,13 +330,11 @@ class DatabasePool extends MyModule.Singleton {
 }
 
 class Repo extends MyModule.Repo {
-  // repos are cached per request (`invoke`)
-
-  // it will only create the db pool once and reuse it
-  // through the application's whole lifetime
-  dbPool = this.inject(DatabasePool)
-
+  // repos are cached per request ("invoke" scope),
+  // so this map will be stateful for the current request scope
   private cache = Map<string, User>()
+
+  dbPool = this.inject(DatabasePool)
 
   async findById(id: string) {
     const cached = this.cache.get(id)
@@ -347,8 +347,9 @@ class Repo extends MyModule.Repo {
 }
 
 class ServiceA extends MyModule.Service {
-  // it will use the same instance that ServiceB is also using
   repo = this.inject(Repo)
+  // This repo instance is exactly the same instance as in ServiceB,
+  // so they both share the same `.cache`
 
   async doSomething() {
     await this.repo.findById("1")
@@ -356,8 +357,9 @@ class ServiceA extends MyModule.Service {
 }
 
 class ServiceB extends MyModule.Service {
-  // it will use the same instance that ServiceA is also using
   repo = this.inject(Repo)
+  // This repo instance is exactly the same instance as in ServiceA,
+  // so they both share the same `.cache`
 
   async doOtherThing() {
     await this.repo.findById("1")
@@ -366,19 +368,20 @@ class ServiceB extends MyModule.Service {
 ```
 
 In this example:
-- The Database Pool will only be created once and will be reused forever
-- The Repo is stateful for each request. The Repo cache can be shared across all usages
-- The Services can both call the Repo and use the same instance
+- The `DatabasePool` will only be created once and will be reused forever
+- The `Repo` will be stateful for each request. A new instance will be created for each request, and reused for the lifetime of the request.
+- Both `ServiceA` and `ServiceB` will share the exact same `Repo` instance during a request.
 
 ### Overriding class scopes
 
 ```ts
-class FooClass extends MyModule.Class {
-  static scope = FooClass.SingletonScope
+class FooService extends MyModule.Service {
+  static scope = FooClass.ScopeTransient
+  // Services have a "invoke" scope by default. This overrides it to be
+  // "transient" instead. Transient classes get created separately for
+  // each usage and aren't cached at all.
 }
 ```
-
-You _can_ override the default scope of a Repo, Service, etc. But it's better to create a new BaseClass to not confuse things.
 
 ### Defining scope when injecting a class
 
@@ -394,21 +397,18 @@ class FooService extends MyModule.Service {
 }
 ```
 
-This will use a transient version of the FooRepo only for the `FooService`. Meaning this service won't share the same cached version that other services might be using.
+This will use a transient version of the FooRepo only inside the `FooService`. Meaning this service won't share the same cached version that other services might be using.
 
-It's not something you'll likely need to use at all. But this shows how the scope defines how long the instance should be cached and shared.
+It's not something you'll likely need to use often. But this shows how the scope defines how long the instance should be cached and shared.
 
 ### Base classes
 
 Vla gives you multiple base classes with semantic names. You can use them as they are, or extend them for your own custom base classes.
 
-- `Service` for services, for reusable units of code (scope: `invoke`)
-- `Repo` for respositories, for data access and external adapters (scope: `invoke`)
-- `Action` for actions, for server-side entry points (scope: `transient`)
+- `Action` for server-side entry points (scope: `transient`)
+- `Service` for reusable units of code (scope: `invoke`)
+- `Repo` for data access and external adapters (scope: `invoke`)
 - `Resource` for long-lived infrastructure clients such as database pools (scope: `singleton`)
 - `Facade` for the interface of a module for cross-module access (scope: `transient`)
 
-Additionally there are 2 generic classes without a semantic meaning:
-
-- `Class` as a base class which can be extended and modified (default scope: `transient`)
-- `Singleton` as a class for singletons without a semantic name (scope: `singleton`)
+Facades and Actions are similar in the way that they provide an interface into the module. The difference is that Actions are meant to be invoked from outside of a module, while Facades are meant to be called from inside of a module.

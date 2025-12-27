@@ -1,11 +1,9 @@
 import { expect, test } from "vitest"
-import { createContext, createModule, Kernel } from "../src"
+import { Kernel, Vla } from "../src"
 
-const AppContext = createContext<{ userId: number }>()
+const AppContext = Vla.createContext<{ userId: number }>()
 
-const Test = createModule("Test")
-
-class TestAction extends Test.Action {
+class TestAction extends Vla.Action {
   ctx = this.inject(AppContext)
 
   handle() {

@@ -1,5 +1,5 @@
-import { getInjectionPoint } from "./dependencies"
-import type { InstantiableClass, Resolved, Scope, Token } from "./types"
+import { getTokenizedDependency } from "../lib/tokenizeDeps"
+import type { InstantiableClass, Resolved, Scope, Token } from "../types"
 
 type Ctor<T = unknown> = InstantiableClass<T> & { readonly scope?: Scope }
 
@@ -153,7 +153,7 @@ export class Kernel {
 
     Object.entries(obj)
       .map(([key, value]) => {
-        const injectionPoint = getInjectionPoint(value)
+        const injectionPoint = getTokenizedDependency(value)
         if (!injectionPoint) return null
 
         return [key, injectionPoint] as const

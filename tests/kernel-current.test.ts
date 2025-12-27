@@ -1,22 +1,20 @@
 import { beforeEach, expect, test, vi } from "vitest"
-import { createModule, Kernel, setCurrentKernelFn } from "../src"
+import { Kernel, Vla } from "../src"
 
 const users: Record<string, { id: string; name: string }> = {
   "1": { id: "1", name: "John" },
   "2": { id: "2", name: "Jane" },
 }
 
-const Users = createModule("Users")
-
 const findMock = vi.fn(async (id: string) => {
   return users[id]
 })
 
-class UserRepo extends Users.Repo {
+class UserRepo extends Vla.Repo {
   findById = this.memo(findMock)
 }
 
-class UserService extends Users.Service {
+class UserService extends Vla.Service {
   repo = this.inject(UserRepo)
 
   async getProfile(id: string) {
@@ -24,7 +22,7 @@ class UserService extends Users.Service {
   }
 }
 
-class ShowUserAction extends Users.Action {
+class ShowUserAction extends Vla.Action {
   service = this.inject(UserService)
 
   async handle(id: string) {
@@ -38,7 +36,7 @@ beforeEach(() => {
 
 const firstKernel = new Kernel().scoped()
 let currentKernel = firstKernel
-setCurrentKernelFn(() => currentKernel)
+Vla.setInvokeKernelProvider(() => currentKernel)
 
 test("uses kernel from currentFn", async () => {
   await expect(ShowUserAction.invoke("1")).resolves.toEqual({
@@ -91,7 +89,7 @@ test("uses kernel from currentFn", async () => {
 })
 
 test("supports async setter", async () => {
-  setCurrentKernelFn(async () => {
+  Vla.setInvokeKernelProvider(async () => {
     await Promise.resolve()
     return currentKernel
   })

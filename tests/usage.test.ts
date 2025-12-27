@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest"
-import { createModule, Kernel } from "../src"
-import { setGlobalKernel } from "../src/kernel-global"
+import { createModule, Kernel, setGlobalInvokeKernel, Vla } from "../src"
 
 const Users = createModule("Users")
 
-class Db extends Users.Resource {
+class Db extends Vla.Resource {
   static readonly unwrap = "users"
 
   users: Record<string, { id: string; name: string }> = {
@@ -39,7 +38,7 @@ class ShowUserAction extends Users.Action {
 
 beforeEach(() => {
   const kernel = new Kernel()
-  setGlobalKernel(kernel)
+  setGlobalInvokeKernel(kernel)
 })
 
 describe("dependency injection", () => {
@@ -71,7 +70,7 @@ describe("dependency injection", () => {
 
   test("can inject singletons", async () => {
     const kernel = new Kernel()
-    setGlobalKernel(kernel)
+    setGlobalInvokeKernel(kernel)
     kernel.bind(
       UserRepo,
       class TestRepo {
@@ -99,7 +98,7 @@ describe("dependency injection", () => {
 
   test("can inject a value", async () => {
     const kernel = new Kernel()
-    setGlobalKernel(kernel)
+    setGlobalInvokeKernel(kernel)
     kernel.bindValue(
       Db,
       {
@@ -164,14 +163,14 @@ describe("dependency scopes", () => {
   test("defaults to transient", async () => {
     const TestModule = createModule("Test")
 
-    class Ticks extends TestModule.Class {
+    class Ticks extends TestModule.Facade {
       ticks = 0
       tick() {
         return ++this.ticks
       }
     }
 
-    class Sample extends TestModule.Class {
+    class Sample extends TestModule.Facade {
       ticks = this.inject(Ticks)
 
       doTick() {
@@ -179,7 +178,7 @@ describe("dependency scopes", () => {
       }
     }
 
-    class Sample2 extends TestModule.Class {
+    class Sample2 extends TestModule.Facade {
       ticks = this.inject(Ticks)
 
       doTick() {
@@ -197,8 +196,8 @@ describe("dependency scopes", () => {
   test("supports singleton", async () => {
     const TestModule = createModule("Test")
 
-    class Ticks extends TestModule.Class {
-      static scope = Ticks.SingletonScope
+    class Ticks extends TestModule.Facade {
+      static scope = Ticks.ScopeSingleton
 
       #ticks = 0
       tick() {
@@ -206,7 +205,7 @@ describe("dependency scopes", () => {
       }
     }
 
-    class SampleTransient extends TestModule.Class {
+    class SampleTransient extends TestModule.Facade {
       ticks = this.inject(Ticks, "transient")
 
       doTick() {
@@ -214,7 +213,7 @@ describe("dependency scopes", () => {
       }
     }
 
-    class SampleSingleton extends TestModule.Class {
+    class SampleSingleton extends TestModule.Facade {
       ticks = this.inject(Ticks)
 
       doTick() {
@@ -236,8 +235,8 @@ describe("dependency scopes", () => {
   test("supports invoke", async () => {
     const TestModule = createModule("Test")
 
-    class Ticks extends TestModule.Class {
-      static scope = Ticks.InvokeScope
+    class Ticks extends TestModule.Facade {
+      static scope = Ticks.ScopeInvoke
 
       #ticks = 0
       tick() {
@@ -245,7 +244,7 @@ describe("dependency scopes", () => {
       }
     }
 
-    class Sample extends TestModule.Class {
+    class Sample extends TestModule.Facade {
       ticks = this.inject(Ticks)
 
       doTick() {
@@ -253,7 +252,7 @@ describe("dependency scopes", () => {
       }
     }
 
-    class Sample2 extends TestModule.Class {
+    class Sample2 extends TestModule.Facade {
       ticks = this.inject(Ticks)
 
       doTick() {
@@ -261,7 +260,7 @@ describe("dependency scopes", () => {
       }
     }
 
-    class SampleTransient extends TestModule.Class {
+    class SampleTransient extends TestModule.Facade {
       ticks = this.inject(Ticks, "transient")
 
       doTick() {

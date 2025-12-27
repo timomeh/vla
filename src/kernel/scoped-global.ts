@@ -2,7 +2,7 @@ import type { Kernel } from "./kernel"
 
 let globalKernel: Kernel | null = null
 
-export function setGlobalKernel(kernel: Kernel) {
+export function setGlobalInvokeKernel(kernel: Kernel) {
   globalKernel = kernel
 }
 

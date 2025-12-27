@@ -3,10 +3,10 @@ import type { Kernel } from "./kernel"
 type CurrentKernelFn = () => Kernel | Promise<Kernel>
 let currentKernelFn: CurrentKernelFn | null = null
 
-export function setCurrentKernelFn(fnKernel: CurrentKernelFn) {
-  currentKernelFn = fnKernel
+export function setInvokeKernelProvider(fn: CurrentKernelFn) {
+  currentKernelFn = fn
 }
 
-export async function getCurrentKernelFromFn() {
+export async function getKernelProvider() {
   return currentKernelFn ? await currentKernelFn() : undefined
 }

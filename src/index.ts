@@ -1,6 +1,19 @@
-export { createContext } from "./context"
-export { Kernel } from "./kernel"
-export { runWithKernel } from "./kernel-als"
-export { setCurrentKernelFn } from "./kernel-current"
-export { setGlobalKernel } from "./kernel-global"
-export { createModule } from "./modules"
+import { createContext, createModule } from "./factories"
+import {
+  setGlobalInvokeKernel,
+  setInvokeKernelProvider,
+  withKernel,
+} from "./kernel"
+
+export * from "./factories"
+export * from "./kernel"
+export * from "./types"
+
+export const Vla = {
+  ...createModule("Vla"),
+  createModule,
+  createContext,
+  withKernel,
+  setGlobalInvokeKernel,
+  setInvokeKernelProvider,
+}

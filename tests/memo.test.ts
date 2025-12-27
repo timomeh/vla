@@ -1,13 +1,12 @@
 import { beforeEach, expect, test, vi } from "vitest"
-import { createModule, Kernel } from "../src"
-import { setGlobalKernel } from "../src/kernel-global"
+import { Kernel, Vla } from "../src"
 
 const users: Record<string, { id: string; name: string }> = {
   "1": { id: "1", name: "John" },
   "2": { id: "2", name: "Jane" },
 }
 
-const Users = createModule("Users")
+const Users = Vla.createModule("Users")
 
 const findMock = vi.fn(async (id: string) => {
   return users[id]
@@ -43,7 +42,7 @@ class UserService extends Users.Service {
 }
 
 const kernel = new Kernel()
-setGlobalKernel(kernel)
+Vla.setGlobalInvokeKernel(kernel)
 
 beforeEach(() => {
   findMock.mockClear()

@@ -3,10 +3,10 @@ import type { Kernel } from "./kernel"
 
 const als = new AsyncLocalStorage<Kernel>()
 
-export function runWithKernel<T>(scopedKernel: Kernel, fn: () => T): T {
+export function withKernel<T>(scopedKernel: Kernel, fn: () => T): T {
   return als.run(scopedKernel, fn)
 }
 
-export function getAlsKernel() {
+export function getAlsInvokeKernel() {
   return als.getStore() ?? null
 }
