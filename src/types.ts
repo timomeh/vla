@@ -34,3 +34,6 @@ export type ModuleClass<
   readonly unwrap?: PropertyKey
   readonly parentLayers: readonly Layer[]
 }
+
+export type VlaInternalKeys = "inject" | "memo" | "devStable"
+export type UserSurface<T> = T extends object ? Omit<T, VlaInternalKeys> : T
