@@ -1,0 +1,27 @@
+{
+  "name": "@examples/koa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "koa": "3.1.1",
+    "koa-bodyparser": "4.4.1",
+    "koa-ejs": "4.3.0",
+    "koa-router": "14.0.0",
+    "vla": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/koa": "^3.0.1",
+    "@types/koa-bodyparser": "^4.3.12",
+    "@types/koa-ejs": "^4.3.2",
+    "@types/koa-router": "^7.4.8",
+    "@types/node": "^25.0.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5"
+  }
+}
