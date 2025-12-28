@@ -1,9 +1,3 @@
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
 body {
   font-family: system-ui, -apple-system, sans-serif;
   max-width: 800px;
@@ -79,4 +73,14 @@ h2 {
   text-align: center;
   color: #999;
   padding: 40px 0;
+}
+
+.example-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #999;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
 }

@@ -5,6 +5,7 @@ import { CreatePost, CurrentUser, ListPosts } from "../data/home.actions"
 export default function Home() {
   return (
     <div>
+      <small className="example-label">Next.js Example</small>
       <h1>Posts</h1>
       <CreatePostForm />
       <hr />
