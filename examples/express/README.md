@@ -11,6 +11,14 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## Features
+
+- Type-safe data layer with Vla
+- Server-side rendering with a template engine (ejs)
+- API Endpoints
+- Form submissions for post creation
+- Session management with cookies
+
 ## Endpoints
 
 - `GET /` - HTML page with posts listing and creation form
