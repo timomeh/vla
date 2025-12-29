@@ -1,0 +1,80 @@
+---
+title: Putting Everything Together
+description: See how Actions, Services, Repos, and Resources work together
+---
+
+Now that we've covered Actions, Services, Repos, and Resources, let's see them work together in a complete example.
+
+## The Complete Picture
+
+```ts
+import { Vla } from 'vla'
+
+// Resource: Long-lived database client
+class Database extends Vla.Resource {
+  static readonly unwrap = "db"
+  db = this.devStable("db", () => new DbClient())
+}
+
+// Repo: Data access with memoization
+class UserRepo extends Vla.Repo {
+  db = this.inject(Database)
+
+  findById = this.memo((id: string) => {
+    return this.db.users.find({ id })
+  })
+}
+
+// Service: Business logic and authorization
+class UserService extends Vla.Service {
+  repo = this.inject(UserRepo)
+  session = this.inject(SessionService)
+
+  async getProfile(userId: string) {
+    // Authorization
+    if (this.session.currentUserId !== userId) {
+      throw new Error('Unauthorized')
+    }
+
+    // Data access through repo
+    const user = await this.repo.findById(userId)
+
+    // Transform for frontend
+    return {
+      name: user.name,
+      email: user.email,
+      joinedAt: user.createdAt
+    }
+  }
+}
+
+const SessionContext = Vla.createContext<{
+  cookies: Cookies
+}>()
+
+class SessionService extends Vla.Service {
+  sessionCtx = this.inject(SessionContext)
+
+  get currentUserId() {
+    const { userId } = parseSession(this.sessionCtx.cookies.get('session_id'))
+    return userId
+  }
+}
+
+// Action: Entry point from framework
+class ShowUserProfile extends Vla.Action {
+  users = this.inject(UserService)
+
+  async handle(userId: string) {
+    return this.users.getProfile(userId)
+  }
+}
+
+// Invoke from your framework
+const profile = await ShowUserProfile.invoke('user-123')
+```
+
+## Growing Your Application
+
+- As your application grows, you can organize code into **Modules** and use **Facades** for cross-module communication. Learn more in [Modules and Facades](/guides/modules/).
+- Learn more about recommended [File Structure](/guides/file-structure/).

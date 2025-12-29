@@ -51,8 +51,6 @@ app.use((req, res, next) => {
 - Isolating test instances
 - Creating temporary dependency overrides
 
----
-
 ### bind()
 
 ```ts
@@ -84,8 +82,6 @@ kernel.bind(UserRepo, MockUserRepo, 'singleton')
 - Mocking dependencies in tests
 - Swapping implementations (e.g., dev vs production)
 - Providing alternative implementations
-
----
 
 ### bindValue()
 
@@ -123,8 +119,6 @@ kernel.bindValue(Config, {
 - Providing mock objects in tests
 - Injecting configuration values
 - Providing primitive values or POJOs
-
----
 
 ### context()
 
@@ -164,8 +158,6 @@ const scoped = kernel
 - Chaining multiple context providers
 - Setting up test context
 
----
-
 ### resolve()
 
 ```ts
@@ -188,8 +180,6 @@ const customScope = kernel.resolve(UserService, 'singleton')
 ```
 
 **Note:** Most users should use `create()` or `get()` instead. Use `resolve()` when you specifically need to bypass unwrapping.
-
----
 
 ### get()
 
@@ -221,8 +211,6 @@ const client = dbInstance.client // PrismaClient
 const client = kernel.get(Database) // PrismaClient directly
 ```
 
----
-
 ### create()
 
 ```ts
@@ -241,121 +229,4 @@ Creates a new instance of a class and injects its dependencies.
 ```ts
 const service = kernel.create(UserService)
 const action = kernel.create(GetUserAction)
-```
-
-**Use cases:**
-- Manual instantiation in tests
-- Creating instances in framework integrations
-- Direct class instantiation with DI
-
-## Static Methods
-
-The Kernel class has no static methods. All functionality is instance-based.
-
-## Related APIs
-
-- [`Vla.setGlobalInvokeKernel()`](/reference/vla/#setglobalinvokekernel) - Set a global kernel
-- [`Vla.setInvokeKernelProvider()`](/reference/vla/#setinvokekernelprovider) - Set a kernel provider
-- [`Vla.withKernel()`](/reference/vla/#withkernel) - Execute code with a specific kernel
-
-## Type Definitions
-
-### Scope
-
-```ts
-type Scope = 'singleton' | 'invoke' | 'transient'
-```
-
-Determines how long instances are cached:
-- `singleton` - Cached forever (across all requests)
-- `invoke` - Cached per request (within scoped kernel)
-- `transient` - Never cached (new instance every time)
-
-### Token
-
-```ts
-type Token<T = unknown> = InstantiableClass<T> & {
-  readonly scope?: Scope
-  readonly unwrap?: PropertyKey
-}
-```
-
-A class that can be used as a dependency injection token.
-
-### InstantiableClass
-
-```ts
-type InstantiableClass<T> = new () => T
-```
-
-A class that can be instantiated with no constructor arguments.
-
-## Examples
-
-### Basic Usage
-
-```ts
-import { Kernel, Vla } from 'vla'
-
-const kernel = new Kernel()
-
-class UserService extends Vla.Service {
-  repo = this.inject(UserRepo)
-}
-
-const service = kernel.create(UserService)
-```
-
-### Testing with Mocks
-
-```ts
-import { test } from 'vitest'
-
-test('user service', async () => {
-  const kernel = new Kernel()
-
-  kernel.bind(UserRepo, class {
-    async findById(id: string) {
-      return { id, name: 'Test User' }
-    }
-  })
-
-  const service = kernel.create(UserService)
-  const user = await service.getUser('1')
-
-  expect(user.name).toBe('Test User')
-})
-```
-
-### Request Scoping
-
-```ts
-import { Kernel, Vla } from 'vla'
-import { cache } from 'react'
-
-const rootKernel = new Kernel()
-
-Vla.setInvokeKernelProvider(
-  cache(() => {
-    return rootKernel.scoped().context(AppContext, {
-      cookies: getCookies()
-    })
-  })
-)
-```
-
-### Multiple Contexts
-
-```ts
-const scoped = kernel
-  .scoped()
-  .context(RequestContext, {
-    headers: req.headers
-  })
-  .context(AuthContext, {
-    userId: session.userId
-  })
-  .context(FeatureContext, {
-    flags: getFeatureFlags()
-  })
 ```

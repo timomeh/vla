@@ -1,0 +1,292 @@
+---
+title: Testing
+description: Write testable code without module mocks
+---
+
+One of Vla's core benefits is making your code easy to test. With dependency injection, you can mock dependencies without complex module mocking systems.
+
+Traditional testing often requires mocking entire modules:
+
+```ts
+// ❌ Without Vla: Complex module mocking
+import { vi } from 'vitest'
+
+vi.mock('./database', () => ({
+  db: {
+    users: {
+      find: vi.fn()
+    }
+  }
+}))
+
+// Mock has to be defined before imports
+import { getUserById } from './users'
+```
+
+With Vla, you inject mocks directly:
+
+```ts
+// ✅ With Vla: Direct dependency mocking
+const kernel = new Kernel()
+kernel.bind(UserRepo, MockUserRepo)
+
+const service = kernel.create(UserService)
+```
+
+import { Aside } from '@astrojs/starlight/components'
+
+<Aside>The examples on this page use [vitest](https://vitest.dev/), but you can use any testing framework with Vla.</Aside>
+
+## Testing Actions
+
+```ts
+class GetUser extends Vla.Action {
+  service = this.inject(UserService)
+
+  async handle(id: string) {
+    return this.service.getUser(id)
+  }
+}
+
+test('GetUser action calls service', async () => {
+  const kernel = new Kernel()
+
+  // Mock the service
+  kernel.bind(
+    UserService,
+    class MockUserService {
+      getUser = vi.fn().mockResolvedValue({ id: '1', name: 'Test' })
+    }
+  )
+
+  const result = await GetUser.withKernel(kernel).invoke('1')
+
+  expect(result).toEqual({ id: '1', name: 'Test' })
+})
+```
+
+## Testing Services
+
+```ts
+import { test, expect, vi } from 'vitest'
+import { Kernel } from 'vla'
+
+class UserService extends Vla.Service {
+  repo = this.inject(UserRepo)
+
+  async getUser(id: string) {
+    return this.repo.findById(id)
+  }
+}
+
+test('getUser returns user from repo', async () => {
+  const kernel = new Kernel()
+
+  // Mock the repository
+  kernel.bind(
+    UserRepo,
+    class MockUserRepo {
+      findById = vi.fn().mockResolvedValue({
+        id: '1',
+        name: 'Test User'
+      })
+    }
+  )
+
+  const service = kernel.create(UserService)
+  const user = await service.getUser('1')
+
+  expect(user).toEqual({
+    id: '1',
+    name: 'Test User'
+  })
+})
+```
+
+## Testing with Context
+
+Mock context values in tests:
+
+```ts
+const AppContext = Vla.createContext<{
+  userId: string | null
+}>()
+
+class SessionService extends Vla.Service {
+  ctx = this.inject(AppContext)
+
+  async currentUser() {
+    return this.ctx.userId
+  }
+}
+
+test('returns current user from context', async () => {
+  const kernel = new Kernel()
+  kernel.context(AppContext, { userId: 'test-user' })
+
+  const service = kernel.create(SessionService)
+  const userId = await service.currentUser()
+
+  expect(userId).toBe('test-user')
+})
+
+test('handles unauthenticated users', async () => {
+  const kernel = new Kernel()
+  kernel.context(AppContext, { userId: null })
+
+  const service = kernel.create(SessionService)
+  const userId = await service.currentUser()
+
+  expect(userId).toBeNull()
+})
+```
+
+## Mocking Strategies
+
+### Mock with Class
+
+Create a mock class that implements the same interface:
+
+```ts
+class MockUserRepo {
+  findById = vi.fn().mockResolvedValue({ id: '1', name: 'Test' })
+  findAll = vi.fn().mockResolvedValue([])
+  create = vi.fn()
+}
+
+test('example', async () => {
+  const kernel = new Kernel()
+  kernel.bind(UserRepo, MockUserRepo)
+
+  const service = kernel.create(UserService)
+  // ...
+})
+```
+
+### Mock with Object
+
+For simpler cases, use plain objects:
+
+```ts
+test('example', async () => {
+  const kernel = new Kernel()
+
+  const mockRepo = {
+    findById: vi.fn().mockResolvedValue({ id: '1', name: 'Test' })
+  }
+
+  kernel.bindValue(UserRepo, mockRepo)
+
+  const service = kernel.create(UserService)
+  // ...
+})
+```
+
+### Integration Testing
+
+Test multiple layers together:
+
+```ts
+test('full integration test', async () => {
+  const kernel = new Kernel().scoped()
+
+  // Only mock external dependencies
+  kernel.bind(
+    Database,
+    class MockDatabase {
+      users = {
+        find: vi.fn().mockResolvedValue({ id: '1', name: 'Real User' })
+      }
+    }
+  )
+
+  // Real service and repo implementations
+  const action = GetUser.withKernel(kernel)
+  const result = await action.invoke('1')
+
+  expect(result.name).toBe('Real User')
+})
+```
+
+## Test Fixtures
+
+Create reusable test fixtures:
+
+```ts
+// test/fixtures.ts
+export function createTestKernel() {
+  const kernel = new Kernel()
+
+  kernel.bind(
+    Database,
+    class MockDatabase {
+      users = {
+        find: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn()
+      }
+    }
+  )
+
+  kernel.context(AppContext, {
+    userId: 'test-user',
+    headers: new Headers()
+  })
+
+  return kernel
+}
+
+// In your tests
+test('example', async () => {
+  const kernel = createTestKernel()
+  const service = kernel.create(UserService)
+  // ...
+})
+```
+
+## Testing Best Practices
+
+### Use Scoped Kernels
+
+```ts
+// ✅ Good: Fresh kernel per test
+test('example', async () => {
+  const kernel = new Kernel()
+  // ...
+})
+
+// ❌ Bad: Shared kernel across tests
+const globalKernel = new Kernel()
+
+test('test 1', () => {
+  // State might leak between tests
+})
+```
+
+### Mock External Dependencies
+
+```ts
+// ✅ Good: Mock external services
+kernel.bind(Database, MockDatabase)
+kernel.bind(EmailService, MockEmailService)
+
+// ✅ Good: Use real business logic
+const service = kernel.create(UserService) // Real implementation
+```
+
+### Test Business Logic, Not Framework
+
+```ts
+// ✅ Good: Test what the service does
+test('creates user with validated email', async () => {
+  const service = kernel.create(UserService)
+  const user = await service.create({ email: 'test@example.com' })
+  expect(user.email).toBe('test@example.com')
+})
+
+// ❌ Bad: Testing Vla's DI system
+test('injects UserRepo', () => {
+  const service = kernel.create(UserService)
+  expect(service.repo).toBeInstanceOf(UserRepo)
+})
+```

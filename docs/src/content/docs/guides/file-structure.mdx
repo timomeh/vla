@@ -1,0 +1,187 @@
+---
+title: File Structure
+description: Learn how to structure files and folders with Vla for apps of any size.
+---
+
+Vla doesn't enforce a specific file structure. You're free to organize your code however you like. However, we recommend aligning your file structure with how Vla structures your code.
+
+This page provides recommendations based on your app's size and complexity.
+
+---
+
+## File per Resource
+
+For small apps or prototypes, keep it simple. A handful of files in a single folder is often enough.
+
+import { FileTree } from '@astrojs/starlight/components';
+
+<FileTree>
+
+- src/
+  - app/ *Your framework's routes*
+  - **data/**
+    - **users.ts**
+    - **posts.ts**
+    - kernel.ts *Kernel setup*
+
+</FileTree>
+import { Aside } from '@astrojs/starlight/components';
+
+## Folder per Layer
+
+When your app grows beyond a few classes, organize files by **layer** (Actions, Services, Repos) using naming conventions or folders.
+
+<FileTree>
+
+- src/
+  - app/
+  - **data/**
+    - kernel.ts
+    - db.ts
+    - **actions/**
+      - listPosts.ts
+      - showPost.ts
+      - showUserProfile.ts
+    - **services/**
+      - postsService.ts
+      - usersService.ts
+    - **repos/**
+      - postsRepo.ts
+      - usersRepo.ts
+
+</FileTree>
+
+## Folder per Module
+
+For large apps or teams, organize by **modules** to separate domains. Each module has its own directory with its layers inside.
+
+<FileTree>
+
+- src/
+  - app/
+  - **data/**
+    - kernel.ts
+    - **resources/**
+      - db.ts
+      - redis.ts
+    - **users/**
+      - user.module.ts
+      - user.facade.ts *Public API for other modules*
+      - user.actions.ts
+      - user.service.ts
+      - user.repo.ts
+    - **billing/**
+      - billing.module.ts
+      - billing.facade.ts *Public API for other modules*
+      - invoice.actions.ts
+      - invoice.service.ts
+      - invoice.repo.ts
+      - subscription.service.ts
+      - subscription.repo.ts
+    - **analytics/**
+      - analytics.module.ts
+      - analytics.facade.ts *Public API for other modules*
+      - analytics.actions.ts
+      - analytics.service.ts
+      - analytics.repo.ts
+
+</FileTree>
+
+## Module Growth Patterns
+
+As a module grows, you can further organize it internally.
+
+### Small Module
+
+Keep everything flat within the module directory.
+
+<FileTree>
+
+- data/
+  - **users/**
+    - user.module.ts
+    - user.actions.ts
+    - user.service.ts
+    - user.repo.ts
+    - user.facade.ts
+
+</FileTree>
+
+### Group by Resource
+
+Group by resource when the module has multiple resources.
+
+<FileTree>
+
+- data/
+  - **billing/**
+    - billing.module.ts
+    - billing.facade.ts
+    - **invoice/**
+      - invoice.service.ts
+      - invoice.repo.ts
+    - **subscription/**
+      - subscription.service.ts
+      - subscription.repo.ts
+    - **payment/**
+      - payment.service.ts
+      - payment.repo.ts
+
+</FileTree>
+
+### Group by Layer
+
+Group by layer type when there are many files.
+
+<FileTree>
+
+- data/
+  - **users/**
+    - user.module.ts
+    - user.facade.ts
+    - auth.facade.ts
+    - **actions/**
+      - user.actions.ts
+      - auth.actions.ts
+      - profile.actions.ts
+    - **services/**
+      - user.service.ts
+      - auth.service.ts
+      - profile.service.ts
+    - **repos/**
+      - user.repo.ts
+      - session.repo.ts
+      - profile.repo.ts
+
+</FileTree>
+
+## General Guidelines
+
+### Keep Resources Global
+
+Resources like database clients are typically shared across modules, so keep them in a shared location.
+
+<FileTree>
+
+- data/
+  - **resources/**
+    - **db.ts**
+    - **redis.ts**
+    - **s3.ts**
+  - users/
+  - billing/
+
+</FileTree>
+
+<Aside>
+Because resources are often shared across modules, they can be injected cross-module, like Facades.
+</Aside>
+
+## Migration Path
+
+You don't need to choose the "perfect" structure upfront. Start simple and evolve:
+
+1. **Start small** - Single file or flat structure
+2. **Split when needed** - Break out files as they grow
+3. **Group when clear** - Add folders when grouping becomes obvious
+4. **Modules when scaling** - Introduce modules when domains become distinct

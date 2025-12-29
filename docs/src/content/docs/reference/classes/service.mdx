@@ -1,37 +1,63 @@
 ---
 title: Service
-description: Understanding Services in Vla's architecture
+description: Business logic and orchestration
 ---
 
 Services contain your business logic. They orchestrate between repositories, other services, and facades.
 
+## Example
+
 ```ts
-class PostService extends Vla.Service {
-  repo = this.inject(PostRepo)
+class UserService extends Vla.Service {
+  repo = this.inject(UserRepo)
+  billing = this.inject(BillingFacade)
   session = this.inject(SessionService)
 
-  async create(data: PostData) {
+  async getProfile(userId: string) {
+    // Authorization
     const currentUser = await this.session.currentUser()
-
-    if (!currentUser.canPost) {
-      throw new Error('Unauthorized')
+    if (currentUser.id !== userId) {
+      throw new UnauthorizedError()
     }
 
-    return this.repo.create({
-      ...data,
-      authorId: currentUser.id
-    })
+    // Data fetching
+    const user = await this.repo.findById(userId)
+    const subscription = await this.billing.getSubscription(userId)
+
+    return {
+      ...user,
+      hasSubscription: !!subscription
+    }
   }
 }
 ```
 
-## When to use
+## When to Use
 
 - Business logic
-- validation
-- authorization
-- orchestration
+- Validation
+- Authorization
+- Orchestration
 
-## Scope
+## Reference
 
-`invoke` (shared within a request)
+### Scope
+
+`invoke` - Shared within a request.
+
+### Properties
+
+```ts
+static readonly scope = 'invoke'
+```
+
+### Methods
+
+Services inherit the `inject()` method from the Injectable mixin.
+
+### Characteristics
+
+- **Scope:** `invoke` (shared within a request)
+- **Purpose:** Business logic, validation, authorization
+- **Can inject:** Other services (same module), Repos, Facades, Resources, Contexts
+- **Best practices:** Keep business logic here, not in repos or actions

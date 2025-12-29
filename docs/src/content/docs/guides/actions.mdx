@@ -1,0 +1,86 @@
+---
+title: Adding Actions
+description: Create entry points into your data layer
+---
+
+Actions are the entry point into your data layer. Create a separate action for each use case and invoke it from your framework (Pages/Layouts in Next.js, loaders in SvelteKit, routes in Express, etc).
+
+## Creating an Action
+
+Actions extend from `Vla.Action` and implement a `handle()` method:
+
+```ts
+import { Vla } from 'vla'
+
+class ShowUserProfile extends Vla.Action {
+  async handle(params) {
+    const { id } = validateParams(params)
+    const db = new Database()
+    const user = await db.users.find({ id })
+
+    return {
+      name: user.name,
+      email: user.email,
+      joinedAt: user.createdAt
+    }
+  }
+}
+```
+
+Invoke actions from your framework:
+
+```ts
+// Express
+app.get('/users/:id', async (req, res) => {
+  const profile = await ShowUserProfile.invoke(req.params)
+  res.json(profile)
+})
+
+// Next.js
+export default async function ProfilePage({ params }) {
+  const profile = await ShowUserProfile.invoke(params)
+  return <div>{profile.name}</div>
+}
+
+// SvelteKit
+export const load = async ({ params }) => {
+  return {
+    profile: await ShowUserProfile.invoke(params)
+  }
+}
+```
+
+In the next guides, we'll refactor this example to use services and repos for better structure and reusability.
+
+## HTTP Awareness with Context
+
+Actions are usually HTTP-aware. Use [Context](/guides/context/) to access request data:
+
+```ts
+const AppContext = Vla.createContext<{
+  req: Request
+  res: Response
+}>()
+
+class RenderProfileView extends Vla.Action {
+  ctx = this.inject(AppContext)
+
+  async handle(userId: string) {
+    const db = new Database()
+    const user = await db.users.find({ id: userId })
+
+    this.ctx.res.render('profile', { user, isAdmin })
+  }
+}
+```
+
+## Key Characteristics
+
+- Actions aren't meant to be reusable—there's usually just one place that invokes a specific action
+- Actions should return data optimized for their use case (e.g., the frontend). The frontend shouldn't need to process data further
+- Actions should not invoke other actions
+- Actions can directly query the database, though using repos or services is recommended for better structure
+
+## Next Steps
+
+To reuse business logic across actions, use [Services](/guides/services/).

@@ -1,30 +1,97 @@
 ---
 title: Repo
-description: Understanding Repos in Vla's architecture
+description: Data access and external adapters
 ---
 
-Repo (Repositories) handle data access and external adapters. They're the only layer that should communicate with databases, APIs, or other external services.
+Repos (repositories) handle data access and external adapters. They're the only layer that should communicate with databases, APIs, or other external services.
+
+## Example
 
 ```ts
 class PostRepo extends Vla.Repo {
   db = this.inject(Database)
 
+  // Memoized queries
   findById = this.memo((id: string) => {
     return this.db.posts.find({ id })
   })
 
+  findByAuthor = this.memo((authorId: string) => {
+    return this.db.posts.findMany({ authorId })
+  })
+
+  // Write operations (not memoized)
   async create(data: PostData) {
-    return this.db.posts.create({ data })
+    const post = await this.db.posts.create({ data })
+
+    // Prime the cache
+    this.findById.prime(post.id).value(post)
+
+    return post
+  }
+
+  async update(id: string, data: Partial<PostData>) {
+    const post = await this.db.posts.update({ where: { id }, data })
+
+    // Bust the cache
+    this.findById.bust(id)
+
+    return post
   }
 }
 ```
 
-## When to use
+## When to Use
 
 - Database queries
-- external API calls
-- file system access
+- External API calls
+- File system access
 
-## Scope
+## Reference
 
-`invoke` (shared within a request)
+### Scope
+
+`invoke` - Shared within a request.
+
+### Properties
+
+```ts
+static readonly scope = 'invoke'
+```
+
+### Methods
+
+Repos inherit both `inject()` and `memo()` methods.
+
+#### memo()
+
+```ts
+memo<Args extends unknown[], R>(
+  fn: (...args: Args) => R
+): Memoized<Args, R>
+```
+
+Creates a memoized method that caches results per request.
+
+```ts
+class UserRepo extends Vla.Repo {
+  db = this.inject(Database)
+
+  findById = this.memo((id: string) => {
+    return this.db.users.find({ id })
+  })
+}
+
+// Multiple calls with same ID = only one database query
+await repo.findById('1') // Executes query
+await repo.findById('1') // Returns cached result
+```
+
+See [Memoization guide](/guides/memoization/) for details.
+
+### Characteristics
+
+- **Scope:** `invoke` (shared within a request)
+- **Purpose:** Data access, external API calls
+- **Can inject:** Resources, Contexts
+- **Best practices:** Memoize reads, not writes; no business logic

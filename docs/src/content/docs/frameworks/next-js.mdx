@@ -1,0 +1,103 @@
+---
+title: Next.js
+description: Integrate Vla with Next.js App Router
+---
+
+Quick guide to integrate Vla with Next.js App Router.
+
+## Install
+
+```bash
+npm install vla
+```
+
+## Create Kernel
+
+Create `src/data/kernel.ts`:
+
+```ts
+import { Kernel, Vla } from 'vla'
+import { cache } from 'react'
+
+export const kernel = new Kernel()
+
+Vla.setInvokeKernelProvider(
+  cache(() => {
+    return kernel.scoped()
+  })
+)
+```
+
+React's `cache()` ensures a fresh scoped kernel for each request.
+
+## Use in Components
+
+```ts
+// src/data/users.actions.ts
+import { Vla } from 'vla'
+
+class GetUser extends Vla.Action {
+  async handle(id: string) {
+    // Your logic here
+    return { id, name: 'User' }
+  }
+}
+
+// src/app/users/[id]/page.tsx
+export default async function UserPage({ params }) {
+  const user = await GetUser.invoke(params.id)
+
+  return <div>{user.name}</div>
+}
+```
+
+## Access Request Context (Optional)
+
+To access cookies or headers, create a context:
+
+```ts
+// src/data/context.ts
+import { Vla } from 'vla'
+import type { cookies } from 'next/headers'
+
+export const AppContext = Vla.createContext<{
+  cookies: Awaited<ReturnType<typeof cookies>>
+}>()
+```
+
+Update your kernel:
+
+```ts
+// src/data/kernel.ts
+import { Kernel, Vla } from 'vla'
+import { cache } from 'react'
+import { cookies } from 'next/headers'
+import { AppContext } from './context'
+
+export const kernel = new Kernel()
+
+Vla.setInvokeKernelProvider(
+  cache(async () => {
+    return kernel.scoped().context(AppContext, {
+      cookies: await cookies()
+    })
+  })
+)
+```
+
+Use in your classes:
+
+```ts
+class GetCurrentUser extends Vla.Action {
+  ctx = this.inject(AppContext)
+
+  async handle() {
+    const sessionId = this.ctx.cookies.get('session_id')
+    // Use session data
+  }
+}
+```
+
+## That's It
+
+You're ready to use Vla in your Next.js app. Check out the [guides](/guides/actions/) to learn how to structure your code with Actions, Services, and Repos.

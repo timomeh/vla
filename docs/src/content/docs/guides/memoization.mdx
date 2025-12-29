@@ -3,7 +3,7 @@ title: Memoization
 description: Optimize database queries with automatic request-scoped caching
 ---
 
-Memoization is one of Vla's most powerful features. It automatically prevents duplicate database queries within a request, making your application faster without manual cache management.
+Memoization in Vla prevents duplicate database queries within a request, making your application faster without manual cache management.
 
 ## The Problem
 
@@ -278,19 +278,9 @@ class UserRepo extends Vla.Repo {
     return this.db.users.find({ id })
   })
 
-  // ✅ Good: Expensive computation
-  calculateStats = this.memo((userId: string) => {
-    return this.db.posts.aggregate({ where: { userId } })
-  })
-
-  // ❌ Bad: Write operation (never memoize writes!)
+  // ❌ Bad: Write operation 
   create = this.memo(async (data: UserData) => {
     return this.db.users.create({ data })
-  })
-
-  // ❌ Bad: Non-deterministic
-  getRandom = this.memo(() => {
-    return Math.random()
   })
 }
 ```
@@ -317,9 +307,3 @@ In real applications, this translates to:
 - Lower database load
 - Reduced API costs (for external services)
 - Better scalability
-
-## Next Steps
-
-- [Context](/guides/context/) - Access request data in your classes
-- [Testing](/guides/testing/) - Mock memoized methods in tests
-- [Best Practices](/guides/best-practices/) - When to use memoization

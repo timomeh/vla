@@ -1,0 +1,100 @@
+---
+title: Modules and Facades
+description: Organize larger applications into separate domains
+---
+
+Modules let you split your codebase into separate domains. Small applications can use the default `Vla.Action`, `Vla.Service`, `Vla.Repo` and `Vla.Resource` classes. As your application grows, you can create separate modules with `Vla.createModule()`.
+
+## Creating Modules
+
+```ts
+import { Vla } from 'vla'
+
+// Default module for smaller apps
+class UserService extends Vla.Service {
+  // ...
+}
+
+// Create separate modules for larger apps
+const Users = Vla.createModule("Users")
+const Billing = Vla.createModule("Billing")
+
+class UserService extends Users.Service {
+  // ...
+}
+
+class BillingService extends Billing.Service {
+  // ...
+}
+```
+
+## Cross-Module Communication with Facades
+
+Modules cannot directly inject services or repos from other modules. Instead, use **Facades** as the public interface:
+
+```ts
+const Users = Vla.createModule("Users")
+const Billing = Vla.createModule("Billing")
+
+// Users module
+class UserRepo extends Users.Repo {
+  db = this.inject(Database)
+
+  findById = this.memo((id: string) => {
+    return this.db.users.find({ id })
+  })
+}
+
+class UserService extends Users.Service {
+  repo = this.inject(UserRepo)
+
+  async hasActiveAccount(userId: string) {
+    const user = await this.repo.findById(userId)
+    return user.status === 'active'
+  }
+}
+
+// Public facade for other modules
+class UsersFacade extends Users.Facade {
+  service = this.inject(UserService)
+
+  async hasActiveAccount(userId: string) {
+    return this.service.hasActiveAccount(userId)
+  }
+}
+
+// Billing module
+class SubscriptionService extends Billing.Service {
+  // ✅ Can inject facades from other modules
+  users = this.inject(UsersFacade)
+
+  // ❌ Cannot inject services/repos from other modules
+  // users = this.inject(UserService) // This will fail!
+
+  async createSubscription(userId: string) {
+    // Use facade to access Users module
+    const hasActiveAccount = await this.users.hasActiveAccount(userId)
+
+    if (!hasActiveAccount) {
+      throw new Error('User must have active account')
+    }
+
+    // Create subscription...
+  }
+}
+```
+
+## Why Facades?
+
+Facades create a clear boundary between modules:
+
+- They define the public API of a module
+- They prevent tight coupling between modules
+- They make it clear which functionality is meant for external use vs. internal use
+
+If you find yourself using facades excessively, it might indicate that your domain boundaries need adjustment.
+
+## Learn More
+
+- [Application Structure](/guides/application-structure/) - Learn more about how Vla structures your app
+- [File Structure](/guides/file-structure/) - Best practices for organizing files and folders

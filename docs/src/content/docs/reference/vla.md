@@ -17,8 +17,6 @@ Vla.Facade   // Cross-module interface
 Vla.Resource // Infrastructure
 ```
 
-See [Base Classes](/reference/base-classes/) for detailed documentation.
-
 ## Methods
 
 ### createModule()
@@ -50,19 +48,6 @@ class PostService extends Posts.Service {
   users = this.inject(UserFacade) // Cross-module via Facade
 }
 ```
-
-**Module object contains:**
-- `Action` - Module-specific action base class
-- `Service` - Module-specific service base class
-- `Repo` - Module-specific repo base class
-- `Facade` - Module-specific facade base class
-- `Resource` - Module-specific resource base class
-- `Memoizable` - Memoization mixin
-- `DevStable` - Development stability mixin
-
-**See also:** [Core Concepts - Modules](/guides/core-concepts/#modules)
-
----
 
 ### createContext()
 
@@ -102,8 +87,6 @@ kernel.context(AppContext, {
 
 **See also:** [Context Guide](/guides/context/)
 
----
-
 ### setGlobalInvokeKernel()
 
 ```ts
@@ -133,8 +116,6 @@ await MyAction.invoke(args)
 - Background jobs
 
 **Warning:** This sets a global kernel that's shared across all invocations. For web applications, use `setInvokeKernelProvider()` instead.
-
----
 
 ### setInvokeKernelProvider()
 
@@ -171,10 +152,6 @@ Vla.setInvokeKernelProvider(
 - Dynamic kernel configuration
 - Context-aware kernel creation
 
-**See also:** [Framework Integration](/guides/framework-integration/)
-
----
-
 ### withKernel()
 
 ```ts
@@ -210,76 +187,3 @@ app.use((req, res, next) => {
 - Framework middleware
 - Wrapping request handlers
 - Setting kernel for a specific execution context
-
-**See also:**
-- [SvelteKit Integration](/guides/framework-integration/#sveltekit)
-- [Express Integration](/guides/framework-integration/#express)
-
-## Type Exports
-
-The Vla namespace also exports useful types:
-
-```ts
-import type { Kernel, Scope, Token } from 'vla'
-
-type Scope = 'singleton' | 'invoke' | 'transient'
-type Token<T = unknown> = InstantiableClass<T> & {
-  readonly scope?: Scope
-  readonly unwrap?: PropertyKey
-}
-```
-
-## Complete Example
-
-```ts
-import { Kernel, Vla } from 'vla'
-import { cache } from 'react'
-
-// Create modules
-const Users = Vla.createModule('Users')
-const Posts = Vla.createModule('Posts')
-
-// Create context
-const AppContext = Vla.createContext<{
-  userId: string | null
-}>()
-
-// Define classes
-class UserService extends Users.Service {
-  ctx = this.inject(AppContext)
-
-  async currentUser() {
-    return this.ctx.userId
-  }
-}
-
-class GetPosts extends Posts.Action {
-  users = this.inject(UserService)
-  posts = this.inject(PostService)
-
-  async handle() {
-    const userId = await this.users.currentUser()
-    return this.posts.getByUser(userId)
-  }
-}
-
-// Setup kernel
-const kernel = new Kernel()
-
-Vla.setInvokeKernelProvider(
-  cache(() => {
-    return kernel.scoped().context(AppContext, {
-      userId: getCurrentUserId()
-    })
-  })
-)
-
-// Invoke actions
-const posts = await GetPosts.invoke()
-```
-
-## Related APIs
-
-- [Kernel](/reference/kernel/) - Kernel class API
-- [Base Classes](/reference/base-classes/) - Action, Service, Repo, etc.
-- [Memoization](/reference/memoization/) - Memo API reference

@@ -1,0 +1,163 @@
+---
+title: Scopes
+description: Understanding class lifecycles and instance caching
+---
+
+Scopes define how long class instances are cached and shared. Vla uses dependency injection to create and manage class instances, caching them based on their scope.
+
+## Singleton
+
+Created once and cached forever. Used for long-lived resources.
+
+```ts
+class Database extends Vla.Resource {
+  static readonly scope = 'singleton'
+
+  client = new PrismaClient()
+}
+
+// Same instance everywhere, forever
+const repo1 = kernel.create(UserRepo) // Creates Database
+const repo2 = kernel.create(PostRepo) // Reuses same Database
+```
+
+**Default for:** Resources
+
+## Invoke
+
+Created once per request and shared within that request.
+
+```ts
+class UserRepo extends Vla.Repo {
+  static readonly scope = 'invoke'
+
+  private cache = new Map()
+
+  async findById(id: string) {
+    // This cache is shared across all usages during the request
+    if (this.cache.has(id)) return this.cache.get(id)
+
+    const user = await this.db.users.find({ id })
+    this.cache.set(id, user)
+    return user
+  }
+}
+
+// Request 1
+const service1 = kernel.create(UserService) // Creates UserRepo
+const service2 = kernel.create(PostService) // Reuses same UserRepo
+// Both services share the same UserRepo instance and cache
+
+// Request 2 (new scoped kernel)
+const service3 = kernel.create(UserService) // Creates new UserRepo
+// Fresh instance with empty cache
+```
+
+**Default for:** Services, Repos
+
+## Transient
+
+Created fresh every time, never cached.
+
+```ts
+class MyAction extends Vla.Action {
+  static readonly scope = 'transient'
+}
+
+// New instance every time
+const action1 = kernel.create(MyAction)
+const action2 = kernel.create(MyAction)
+// action1 !== action2
+```
+
+**Default for:** Actions, Facades
+
+## Setting Scope on Classes
+
+Override the default scope with the static `scope` property:
+
+```ts
+class Logger extends Vla.Service {
+  static readonly scope = 'transient'
+  // Services default to 'invoke', but we override to 'transient'
+}
+```
+
+Use the scope constants for type safety:
+
+```ts
+class Logger extends Vla.Service {
+  static readonly scope = Logger.ScopeTransient
+  // or Logger.ScopeInvoke
+  // or Logger.ScopeSingleton
+}
+```
+
+## Overriding Scope When Injecting
+
+Override the scope for a specific injection:
+
+```ts
+class FooRepo extends Vla.Repo {
+  async findById(id: string) {
+    return this.db.users.find({ id })
+  }
+}
+
+class FooService extends Vla.Service {
+  // Use a transient instance of FooRepo
+  repo = this.inject(FooRepo, 'transient')
+
+  async getUser(id: string) {
+    // This service gets its own FooRepo instance
+    // It doesn't share with other services
+    return this.repo.findById(id)
+  }
+}
+```
+
+This creates a separate instance that doesn't share the cached version used elsewhere.
+
+## How Instance Variables Work
+
+Instance variables are stateful within their scope:
+
+```ts
+class UserRepo extends Vla.Repo {
+  static readonly scope = 'invoke'
+  private cache = new Map()
+
+  async findById(id: string) {
+    // This cache persists for the request scope
+    if (this.cache.has(id)) return this.cache.get(id)
+
+    const user = await this.db.users.find({ id })
+    this.cache.set(id, user)
+    return user
+  }
+}
+
+class ServiceA extends Vla.Service {
+  repo = this.inject(UserRepo)
+
+  async doSomething() {
+    await this.repo.findById('1') // Sets cache
+  }
+}
+
+class ServiceB extends Vla.Service {
+  repo = this.inject(UserRepo)
+  // Same UserRepo instance as ServiceA
+
+  async doOtherThing() {
+    await this.repo.findById('1') // Uses cache from ServiceA
+  }
+}
+```
+
+Both services share the same `UserRepo` instance, so they share the same `cache` Map.
+
+## Best Practices
+
+- **Default scopes are usually correct** - Only override when you have a specific reason
+- **Be careful with instance variables in transient classes** - They won't be shared between usages

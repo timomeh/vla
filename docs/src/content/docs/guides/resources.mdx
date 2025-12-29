@@ -1,0 +1,78 @@
+---
+title: Using Resources
+description: Long-lived infrastructure clients
+---
+
+Resources are long-lived infrastructure clients like database pools or API clients. They are usually called by repos.
+
+## Creating a Resource
+
+Let's refactor the repo from the previous guide to use a resource:
+
+```ts
+import { Vla } from 'vla'
+
+class Database extends Vla.Resource {
+  static readonly unwrap = "db"
+  // Unwraps the `db` property when injected, so you don't have to write `this.db.db`
+
+  db = this.devStable("db", () => new DbClient())
+  // devStable() prevents creating new clients during hot-reload in development
+}
+
+class UserRepo extends Vla.Repo {
+  db = this.inject(Database)
+  // Thanks to `unwrap`, this returns the DbClient instance directly
+
+  findById = this.memo((id: string) => {
+    return this.db.users.find({ id })
+  })
+}
+```
+
+## Singleton Scope
+
+Resources are singletons. They are created once when first injected and cached forever:
+
+```ts
+class ApiClient extends Vla.Resource {
+  client = this.devStable("apiClient", () => {
+    console.log('Creating API client')
+    return new SomeApiClient()
+  })
+}
+
+// First usage anywhere in your app
+const repo1 = kernel.create(SomeRepo)
+// Logs: "Creating API client"
+
+// Second usage (or anywhere else)
+const repo2 = kernel.create(AnotherRepo)
+// No log - reuses the existing instance
+```
+
+## Hot-Reload Safety
+
+The `this.devStable()` utility prevents issues during hot-reload in development:
+
+```ts
+class Database extends Vla.Resource {
+  // Without devStable: creates new connection on every hot-reload
+  db = new DbClient()
+
+  // With devStable: reuses existing connection during hot-reload
+  db = this.devStable("db", () => new DbClient())
+}
+```
+
+`this.devStable()` is not required in all frameworks, but in some (like Next.js + Prisma) it's necessary to avoid issues in development mode.
+
+## Key Characteristics
+
+- Resources should not be aware of context like sessions
+- Resources don't call services or repos
+- Resources are singletons, shared across all requests
+
+## Next Steps
+
+Now that you've learned about Actions, Services, Repos, and Resources, see how they work together in [Putting Everything Together](/guides/putting-together/).

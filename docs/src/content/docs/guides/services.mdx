@@ -1,0 +1,120 @@
+---
+title: Using Services
+description: Reusable business logic and authorization
+---
+
+Services contain reusable code and business concerns. They are usually called by actions or other services.
+
+## Creating a Service
+
+Let's refactor the action from the previous guide to use a service:
+
+```ts
+import { Vla } from 'vla'
+
+class UserService extends Vla.Service {
+  async getProfile(userId: string) {
+    const db = new Database()
+    const user = await db.users.find({ id: userId })
+
+    return {
+      name: user.name,
+      email: user.email,
+      joinedAt: user.createdAt
+    }
+  }
+}
+
+class ShowUserProfile extends Vla.Action {
+  users = this.inject(UserService)
+
+  async handle(userId: string) {
+    return this.users.getProfile(userId)
+  }
+}
+```
+
+Now the profile logic is reusable across multiple actions:
+
+```ts
+class ShowUserDashboard extends Vla.Action {
+  users = this.inject(UserService)
+
+  async handle(userId: string) {
+    const profile = await this.users.getProfile(userId)
+    // Reuse the same service logic
+    return { profile, /* ... */ }
+  }
+}
+```
+
+## Authorization and Context
+
+Services typically enforce authorization rules. Use [Context](/guides/context/) to access session data:
+
+```ts
+class UserService extends Vla.Service {
+  session = this.inject(SessionService)
+
+  async getProfile(userId: string) {
+    // Enforce authorization
+    if (this.session.currentUserId !== userId) {
+      throw new Error('Unauthorized')
+    }
+
+    const db = new Database()
+    return db.users.find({ id: userId })
+  }
+}
+
+const SessionContext = Vla.createContext<{
+  cookies: Cookies
+}>()
+
+class SessionService extends Vla.Service {
+  sessionCtx = this.inject(SessionContext)
+
+  get currentUserId() {
+    const { userId } = parseSession(this.sessionCtx.cookies.get('session_id'))
+    return userId
+  }
+}
+```
+
+Services should not be aware of the HTTP request directly (no `req` or `res`), but can use context for session data.
+
+## Shared Instance (Invoke Scope)
+
+Services have a scope of `invoke`, meaning all usages during a request share the same instance. Instance variables are stateful within the request:
+
+```ts
+class UserService extends Vla.Service {
+  private cache = new Map()
+
+  async getUser(id: string) {
+    if (this.cache.has(id)) {
+      return this.cache.get(id)
+    }
+
+    const db = new Database()
+    const user = await db.users.find({ id })
+    this.cache.set(id, user)
+    return user
+  }
+}
+
+// Multiple services using UserService share the same instance and cache
+class PostService extends Vla.Service {
+  users = this.inject(UserService)
+  // This is the same UserService instance with the same cache
+}
+```
+
+## Key Characteristics
+
+- Services don't call actions
+- Services can call the database directly, but should use repos for better data access (covered in the next guide)
+
+## Next Steps
+
+For data access and external adapters, use [Repos](/guides/repos/).

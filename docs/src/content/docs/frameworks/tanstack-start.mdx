@@ -1,0 +1,127 @@
+---
+title: TanStack Start
+description: Integrate Vla with TanStack Start
+---
+
+Quick guide to integrate Vla with TanStack Start.
+
+## Install
+
+```bash
+npm install vla
+```
+
+## Create Kernel
+
+Create `src/data/kernel.ts`:
+
+```ts
+import { Kernel } from 'vla'
+
+export const kernel = new Kernel()
+```
+
+## Set Up Middleware
+
+Create or update `src/start.ts`:
+
+```ts
+import { createMiddleware, createStart } from '@tanstack/react-start'
+import { Vla } from 'vla'
+import { kernel } from './data/kernel'
+
+const vlaMiddleware = createMiddleware().server(async ({ next }) => {
+  return Vla.withKernel(kernel.scoped(), () => next())
+})
+
+export const startInstance = createStart(() => {
+  return {
+    requestMiddleware: [vlaMiddleware]
+  }
+})
+```
+
+This creates a scoped kernel for each request.
+
+## Use in Server Functions
+
+```ts
+// src/data/users.actions.ts
+import { Vla } from 'vla'
+
+class GetUser extends Vla.Action {
+  async handle(id: string) {
+    // Your logic here
+    return { id, name: 'User' }
+  }
+}
+
+// src/routes/users.$id.tsx
+import { createServerFn } from '@tanstack/react-start'
+import { GetUser } from '../data/users.actions'
+
+const getUserFn = createServerFn({ method: 'GET' })
+  .inputValidator((id: string) => id)
+  .handler(async ({ data }) => {
+    return GetUser.invoke(data)
+  })
+
+export const Route = createFileRoute('/users/$id')({
+  component: UserPage,
+  loader: ({ params }) => getUserFn({ data: params.id })
+})
+```
+
+## Access Request Context (Optional)
+
+To access session or other request data, create a context:
+
+```ts
+// src/data/context.ts
+import { Vla } from 'vla'
+
+export const AppContext = Vla.createContext<{
+  session: { userId: string }
+}>()
+```
+
+Update your middleware:
+
+```ts
+import { createMiddleware, createStart } from '@tanstack/react-start'
+import { Vla } from 'vla'
+import { kernel } from './data/kernel'
+import { AppContext } from './data/context'
+
+const vlaMiddleware = createMiddleware().server(async ({ next }) => {
+  const session = await getSession() // Your session logic
+
+  return Vla.withKernel(
+    kernel.scoped().context(AppContext, { session }),
+    () => next()
+  )
+})
+
+export const startInstance = createStart(() => {
+  return {
+    requestMiddleware: [vlaMiddleware]
+  }
+})
+```
+
+Use in your classes:
+
+```ts
+class GetCurrentUser extends Vla.Action {
+  ctx = this.inject(AppContext)
+
+  async handle() {
+    const userId = this.ctx.session.userId
+    // Use session data
+  }
+}
+```
+
+## That's It
+
+You're ready to use Vla in your TanStack Start app. Check out the [guides](/guides/actions/) to learn how to structure your code with Actions, Services, and Repos.

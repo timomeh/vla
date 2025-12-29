@@ -1,0 +1,76 @@
+---
+title: Using Repos
+description: Handle data access with repositories
+---
+
+Repos (repositories) handle data access and external adapters. They are usually called by services.
+
+## Creating a Repo
+
+Let's refactor the service from the previous guide to use a repo:
+
+```ts
+import { Vla } from 'vla'
+
+class UserRepo extends Vla.Repo {
+  async findById(id: string) {
+    const db = new Database()
+    return db.users.find({ id })
+  }
+}
+
+class UserService extends Vla.Service {
+  repo = this.inject(UserRepo)
+  session = this.inject(SessionService)
+
+  async getProfile(userId: string) {
+    // Services handle authorization
+    if (this.session.currentUserId !== userId) {
+      throw new Error('Unauthorized')
+    }
+
+    // Repos handle data access
+    const user = await this.repo.findById(userId)
+
+    return {
+      name: user.name,
+      email: user.email,
+      joinedAt: user.createdAt
+    }
+  }
+}
+```
+
+## Built-in Memoization
+
+Repos have a built-in `this.memo()` helper for memoization. This automatically caches method results within a request:
+
+```ts
+class UserRepo extends Vla.Repo {
+  // Memoized method - only executes once per unique ID during a request
+  findById = this.memo((id: string) => {
+    const db = new Database()
+    return db.users.find({ id })
+  })
+}
+
+// Multiple calls with the same ID = only one database query
+await repo.findById('1') // Executes query
+await repo.findById('1') // Returns cached result
+await repo.findById('2') // Executes new query
+```
+
+Learn more about memoization in the [Memoization guide](/guides/memoization/).
+
+## Key Characteristics
+
+- Repos should not be aware of context like sessions
+- Repos don't check for authorization—that's the service's responsibility
+- Repos don't call services
+- Repos can call other repos. When doing so, it's good practice to create a separate repo that combines multiple repos
+- Repos have a scope of `invoke`, meaning all usages during a request share the same instance. This is how memoization works across your entire application
+- Repos can call the database directly, but should use a resource for better infrastructure management (covered in the next guide)
+
+## Next Steps
+
+For long-lived infrastructure clients like database pools, use [Resources](/guides/resources/).

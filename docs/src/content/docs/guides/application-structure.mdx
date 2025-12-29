@@ -1,0 +1,105 @@
+---
+title: Application Structure
+description: Learn how Vla structures your TypeScript backends into layers, modules and interfaces.
+---
+
+Vla structures your backend with common patterns that enforce clean code dependencies: Layers, Modules and Interfaces.
+
+### Layers
+
+Vla organizes code into **layers** that flow in a single direction. Higher layers can use lower layers, but not vice versa.
+
+![](./src/assets/layers.png)
+
+Each layer has its own concern and doesn't need to know about other concerns.
+
+| **Layer** | **Concern** |
+| - | - |
+| **Actions** | Entry points from your framework (routes, server functions, API endpoints). They are aware of the HTTP request, like bodies and response codes. |
+| **Services** | Reusable business logic, orchestration and authorization. They are of the context, like a session, but not the HTTP request. |
+| **Repos** | Data access for databases, external APIs and adapters. They are aware how to access data, but not of session context, authorization or business rules. |
+| **Resources** | Long-lived infrastructure like database pools or HTTP clients. They provide a singleton and are not aware of the HTTP request or other request-based context. |
+
+```ts
+// ✅ Correct: Actions use Services, Services use Repos
+class CreatePost extends Vla.Action {
+  service = this.inject(PostService)
+
+  async handle(content: string) {
+    return this.service.create(content)
+  }
+}
+
+class PostService extends Vla.Service {
+  repo = this.inject(PostRepo)
+  session = this.inject(SessionService) // Services can use other Services
+
+  async create(content: string) {
+    const user = await this.session.currentUser()
+    return this.repo.create({ content, userId: user.id })
+  }
+}
+
+class PostRepo extends Vla.Repo {
+  db = this.inject(Database)
+
+  create = this.memo((data) => this.db.posts.create(data))
+}
+
+// ❌ This would error: Repos cannot inject Services
+class BadRepo extends Vla.Repo {
+  service = this.inject(PostService) // ⛔ Error!
+}
+```
+
+import { Aside } from '@astrojs/starlight/components';
+
+<Aside>
+Vla enforces these dependency rules. If you try to inject a Service into a Repo (which would break the layer flow), Vla will throw an error.
+</Aside>
+
+### Modules
+
+**Modules** let you separate domains and maintain clear boundaries. Small apps might only need one module (or none at all: use `Vla.Action`, `Vla.Service`, etc.). Larger apps can create multiple modules.
+
+```ts
+const Users = Vla.createModule("Users")
+const Billing = Vla.createModule("Billing")
+const Analytics = Vla.createModule("Analytics")
+
+// Modules can only access other modules through Facades
+class BillingService extends Billing.Service {
+  users = this.inject(UserFacade) // ✅ Facade from Users module
+
+  // ❌ This would error: Can't inject Services from other modules
+  // userService = this.inject(UserService) // ⛔ Error!
+}
+
+class UserFacade extends Users.Facade {
+  repo = this.inject(UserRepo)
+
+  // Expose only what other modules need
+  async findById(id: string) {
+    return this.repo.findById(id)
+  }
+}
+```
+
+![](./src/assets/modules.png)
+
+<Aside>
+If you have a smaller app, you might not need multiple modules at all. A module is a domain that can consist of multiple resources. While you can create separate modules for each resource, you do not need to.
+</Aside>
+
+### Interfaces
+
+Vla's layers and modules implicitly result in better interfaces between code dependencies:
+
+**Facades** are public interfaces for cross-module dependencies. They are like a contract to call code of a module from another module.
+Making breaking changes to a facade will likely cause other modules to fail.
+
+**Layers** can have private and public methods. These methods are the interfaces for other layers within the same module.
+
+<Aside type="tip">
+Facades add a layer of indirection, but they keep module boundaries clean. If you find yourself using Facades excessively, consider whether your domain modeling could be improved.
+</Aside>

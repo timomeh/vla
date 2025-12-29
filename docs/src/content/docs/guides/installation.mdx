@@ -1,5 +1,5 @@
 ---
-title: Getting Started
+title: Installation
 description: Install and start using Vla in your project
 ---
 
@@ -239,7 +239,7 @@ Actions can be invoked from anywhere in your application:
     // src/routes/index.ts
     import { createFileRoute } from "@tanstack/react-router"
     import { createServerFn } from "@tanstack/react-start"
-    import { GetUser } from "../data/users.actions"
+    import { GetUser } from "@/data/users.actions"
 
     const getUserFn = createServerFn({ method: "GET" }).handler(async () => {
       const user = await GetUser.invoke(params)
@@ -262,7 +262,7 @@ Actions can be invoked from anywhere in your application:
     ```ts
     // routes/users.ts
     import express from "express"
-    import { GetUser } from "./data/users.actions"
+    import { GetUser } from "@/data/users.actions"
 
     const app = express()
 
@@ -278,8 +278,5 @@ Actions can be invoked from anywhere in your application:
 
 Now that you have Vla set up, learn about:
 
-- [Core Concepts](/guides/core-concepts/) - Understanding modules, classes, and dependency injection
-- [Memoization](/guides/memoization/) - Optimize database queries with built-in memoization
-- [Context](/guides/context/) - Access request context in your classes
-- [Testing](/guides/testing/) - Write testable code without mocks
-- [Framework Integration](/guides/framework-integration/) - Deep integration with your framework
+- [Adding Actions](/guides/actions) - Follow a step by step guide to work with Actions, Services, Repos and Resources
+- [Why Vla?](/guides/why-vla/) - Learn more about the benefits of using Vla in your app

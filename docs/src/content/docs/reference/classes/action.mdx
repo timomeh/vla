@@ -1,29 +1,90 @@
 ---
 title: Action
-description: Understanding Actions in Vla's architecture
+description: Entry points to your data layer
 ---
 
 Actions are entry points to your data layer. They're invoked from your framework's route handlers, server actions, or API endpoints.
 
+## Example
+
 ```ts
 class CreatePost extends Vla.Action {
   posts = this.inject(PostService)
+  session = this.inject(SessionService)
 
-  async handle(title: string, content: string) {
-    return this.posts.create({ title, content })
+  async handle(data: PostData) {
+    const user = await this.session.requireAuth()
+    return this.posts.create(user.id, data)
   }
 }
 
 // Invoke from your framework
-const post = await CreatePost.invoke("Hello", "World")
+const post = await CreatePost.invoke(postData)
 ```
 
-## When to use
+## When to Use
 
 - Entry points for user requests
 - Server actions
 - API handlers
 
-## Scope
+## Reference
 
-`transient` (new instance per invocation)
+### Scope
+
+`transient` - New instance created per invocation.
+
+### Properties
+
+```ts
+static readonly scope = 'transient'
+abstract handle(...args: unknown[]): unknown | Promise<unknown>
+```
+
+### Methods
+
+#### invoke()
+
+```ts
+static async invoke<TResult>(
+  ...args: Parameters<handle>
+): Promise<TResult>
+```
+
+Executes the action's `handle` method with the provided arguments.
+
+```ts
+class GetUser extends Vla.Action {
+  repo = this.inject(UserRepo)
+
+  async handle(userId: string) {
+    return this.repo.findById(userId)
+  }
+}
+
+const user = await GetUser.invoke('123')
+```
+
+#### withKernel()
+
+```ts
+static withKernel(kernel: Kernel): {
+  invoke<TResult>(...args: Parameters<handle>): Promise<TResult>
+}
+```
+
+Creates an action invoker with a specific kernel. Useful for testing.
+
+```ts
+const kernel = new Kernel()
+kernel.bind(UserRepo, MockUserRepo)
+
+const user = await GetUser.withKernel(kernel).invoke('123')
+```
+
+### Characteristics
+
+- **Scope:** `transient` (new instance per invocation)
+- **Purpose:** Entry points, request handlers
+- **Can inject:** Services, Repos, Facades, Resources, Contexts
+- **Best practices:** Keep thin, delegate to services

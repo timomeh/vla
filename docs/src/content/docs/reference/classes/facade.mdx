@@ -1,39 +1,71 @@
 ---
 title: Facade
-description: Understanding Facades in Vla's architecture
+description: Public API for cross-module access
 ---
 
 Facades provide a public API for cross-module access. When one module needs to use functionality from another module, it should inject a Facade, not a Service or Repo.
 
 Invalid cross-module access will result in a build error and runtime exception.
 
+## Example
+
 ```ts
-// data/users/user.facade.ts
+// users/users.facade.ts
+const Users = Vla.createModule('Users')
+
 class UserFacade extends Users.Facade {
   service = this.inject(UserService)
 
   async getUser(id: string) {
-    return this.service.getById(id)
+    return this.service.findById(id)
+  }
+
+  async hasPermission(userId: string, permission: string) {
+    return this.service.checkPermission(userId, permission)
   }
 }
-```
 
-```ts
-// data/posts/post.service.ts
+// posts/posts.service.ts
+const Posts = Vla.createModule('Posts')
+
 class PostService extends Posts.Service {
-  users = this.inject(UserFacade) // Cross-module access
+  users = this.inject(UserFacade) // ✅ Cross-module access
 
   async createPost(userId: string, data: PostData) {
-    const user = await this.users.getUser(userId)
-    // ...
+    const canPost = await this.users.hasPermission(userId, 'post:create')
+
+    if (!canPost) {
+      throw new Error('Permission denied')
+    }
+
+    // Create post...
   }
 }
 ```
 
-## When to use
+## When to Use
 
 - Public interface for cross-module dependencies
 
-## Scope
+## Reference
 
-`transient` (new instance per usage)
+### Scope
+
+`transient` - New instance created per usage.
+
+### Properties
+
+```ts
+static readonly scope = 'transient'
+```
+
+### Methods
+
+Facades inherit the `inject()` method.
+
+### Characteristics
+
+- **Scope:** `transient` (new instance per usage)
+- **Purpose:** Public interface for modules
+- **Can inject:** Services, Repos (same module), other Facades, Resources, Contexts
+- **Best practices:** Only expose what other modules need

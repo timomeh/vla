@@ -1,0 +1,443 @@
+---
+title: Why Vla?
+description: Learn why Vla is the missing piece for scalable TypeScript backends and how it solves common challenges in fullstack development.
+---
+
+The TypeScript ecosystem has excellent frameworks for building fullstack apps: Next.js, SvelteKit, React Router, Tanstack Start, and classic options like Express and Koa. Many frameworks excel at frontend rendering, routing, and providing APIs to invoke backend code.
+
+**But there's a gap.**
+
+Most frameworks are loose about how you structure your data layer code. They give you the freedom to organize it however you want, which sounds great until your app grows. Without clear patterns, you end up with:
+
+- Slower development as code becomes harder to navigate
+- Frequent refactoring to untangle messy dependencies
+- Difficult testing with mocks scattered everywhere
+- Unclear separation between business logic and data access
+
+**This is where Vla comes in.** It fills the missing gap in the data layer, providing structure and conventions that make your backend code scalable, maintainable, testable, and enjoyable to work with.
+
+---
+
+## tldr?
+
+- Vla works great with apps of any size.
+- You can incrementally adopt Vla into existing apps. No need to rewrite everything.
+- Use any framework with Vla. Vla is built to be framework agnostic.
+- Write code that's better to test.
+- Vla has built-in features, like memoization to reduce the amount of unnecessary database queries.
+
+## Apps of Any Size
+
+Vla scales with your project. From quick prototypes to large team-based applications.
+
+### Small Apps
+
+**Start simple.** Small apps can use Vla's built-in single module to structure code into layers. You can keep everything in a single file or a handful of files.
+
+```ts
+// data/app.ts
+// Everything in one place
+import { Vla } from "vla"
+
+export class ShowDashboard extends Vla.Action {
+  stats = this.inject(StatsService)
+  async handle() {
+    return this.stats.getOverview()
+  }
+}
+
+class StatsService extends Vla.Service {
+  repo = this.inject(StatsRepo)
+  async getOverview() {
+    const total = await this.repo.count()
+    return { total }
+  }
+}
+
+class StatsRepo extends Vla.Repo {
+  db = this.inject(Database)
+  count = this.memo(() => this.db.stats.count())
+}
+
+class Database extends Vla.Resource {
+  static readonly unwrap = "db"
+  db = new DbClient()
+}
+```
+
+As your app grows, split classes into separate files. But you can keep using the same single module.
+
+### Large Apps
+
+**Split into modules.** Larger apps and teams can organize code into separate modules to isolate domains from each other.
+
+```ts
+// users/module.ts
+export const Users = Vla.createModule("Users")
+
+// users/actions.ts
+export class ShowUserProfile extends Users.Action {
+  service = this.inject(UserService)
+  async handle(userId: string) { /* ... */ }
+}
+
+// users/facades.ts - Public API for other modules
+export class UserFacade extends Users.Facade {
+  repo = this.inject(UserRepo)
+
+  async findById(id: string) {
+    return this.repo.findById(id)
+  }
+}
+
+// billing/services.ts
+export class BillingService extends Billing.Service {
+  // ✅ Access Users module through its Facade
+  users = this.inject(UserFacade)
+
+  async createInvoice(userId: string) {
+    const user = await this.users.findById(userId)
+    // ...
+  }
+}
+```
+
+**Benefits for teams:**
+- Work independently on separate modules
+- Maintain clear contracts between modules with Facades
+- Organize code ownership by directories
+- Prevent messy cross-module dependencies
+
+## Framework Agnostic
+
+Vla is a **library, not a framework.** It has no built-in HTTP server, no custom build tools, no exotic integrations. This makes it easy to integrate into any framework—and keeps it compatible when frameworks release major updates.
+
+### Works Everywhere
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+  <TabItem label="Next.js">
+    ```tsx
+    // app/posts/page.tsx
+    import { ListPosts } from "@/data/posts.actions"
+
+    export default async function PostsPage() {
+      const posts = await ListPosts.invoke()
+      return <ul>{posts.map(p => <li key={p.id}>{p.title}</li>)}</ul>
+    }
+    ```
+  </TabItem>
+  <TabItem label="SvelteKit">
+    ```ts
+    // src/routes/posts/+page.server.ts
+    import { ListPosts } from "$lib/data/posts.actions"
+
+    export const load = async () => {
+      const posts = await ListPosts.invoke()
+      return { posts }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Express">
+    ```ts
+    // routes/posts.ts
+    import { ListPosts } from "@/data/posts.actions"
+
+    app.get("/api/posts", async (req, res) => {
+      const posts = await ListPosts.invoke()
+      res.json({ posts })
+    })
+    ```
+  </TabItem>
+  <TabItem label="Tanstack Start">
+    ```ts
+    // routes/posts.ts
+    import { ListPosts } from "@/data/posts.actions"
+
+    export const listPostsFn = createServerFn()
+      .handler(async () => {
+        return ListPosts.invoke()
+      })
+    ```
+  </TabItem>
+</Tabs>
+
+**No lock-in.** Because Vla doesn't rely on custom build steps or framework-specific plugins, you won't face breaking changes when your framework releases major updates.
+
+## Dependency Injection
+
+Vla uses **Dependency Injection (DI)** to manage how classes find and use their dependencies. Instead of manually creating instances, you declare what you need with `this.inject()`, and Vla handles the rest.
+
+```ts
+// ❌ Tightly coupled - hard to test, hard to change
+async function createPost(content: string) {
+  const { user } = await getSession()
+  ensureAccess(user, "create", "Post")
+  await db.posts.create({ content })
+}
+```
+
+With Vla's Dependency Injection, your code depends on **contracts**:
+
+```ts
+// ✅ Looser coupling via dependency inversion - easy to test, easy to change
+class PostService extends Vla.Service {
+  repo = this.inject(PostRepo)
+  authz = this.inject(Authz)
+
+  async create(content: string) {
+    this.authz.ensureAccess("create", "Post")
+    return this.repo.create(content)
+  }
+}
+```
+
+### No Decorators, No Reflection
+
+Unlike many DI frameworks, Vla intentionally avoids decorators and reflection. This keeps it:
+
+- **Simple** - No magic, just straightforward TypeScript
+- **Type-safe** - Full TypeScript inference without experimental features
+- **Transparent** - Easy to understand and debug
+
+### Smart Dependency Rules
+
+Vla ensures you're not injecting things that shouldn't be injected:
+
+```ts
+// ✅ Allowed: Actions can inject Services
+class ShowPost extends Vla.Action {
+  service = this.inject(PostService)
+}
+
+// ✅ Allowed: Services can inject Repos
+class PostService extends Vla.Service {
+  repo = this.inject(PostRepo)
+}
+
+// ✅ Allowed: Cross-module through Facades
+class BillingService extends Billing.Service {
+  users = this.inject(UserFacade) // from Users module
+}
+
+// ❌ Prevented: Repos cannot inject Services (breaks layer flow)
+class PostRepo extends Vla.Repo {
+  service = this.inject(PostService) // ⛔ Error!
+}
+
+// ❌ Prevented: Can't deep-inject across modules
+class BillingService extends Billing.Service {
+  userRepo = this.inject(UserRepo) // ⛔ Error! Use UserFacade instead
+}
+```
+
+## Testability
+
+Vla makes testing easier by reducing the need for module mocks that leak file paths and folder structures into your tests. With Vla's dependency injection, you mock at the class level, not the module level.
+
+### Before: Testing Without Vla
+
+```ts
+// ❌ module mocks everywhere
+import { vi } from "vitest"
+
+// Mock the entire module - leaks file structure
+vi.mock("./repos/user-repo", () => ({
+  UserRepo: vi.fn().mockImplementation(() => ({
+    findById: vi.fn().mockResolvedValue({ id: "1", name: "Alice" })
+  }))
+}))
+
+vi.mock("./services/billing-service", () => ({
+  BillingService: vi.fn().mockImplementation(() => ({
+    hasSubscription: vi.fn().mockResolvedValue(true)
+  }))
+}))
+
+import { UserService } from "./services/user-service"
+
+test("gets user profile", async () => {
+  const service = new UserService()
+  const result = await service.getProfile("1")
+  expect(result).toEqual({ name: "Alice", hasSubscription: true })
+})
+
+// If you move files or rename them, your mocks break 💔
+```
+
+### After: Testing With Vla
+
+```ts
+// ✅ mock by binding mocks into the kernel
+import { Vla } from "vla"
+import { vi } from "vitest"
+import { ShowUserProfile } from "./users.actions"
+import { UserRepo } from "./users.repo"
+import { BillingFacade } from "./billing.facade"
+
+test("gets user profile", async () => {
+  const kernel = new Vla.Kernel()
+
+  // Mock classes, not modules - no file paths
+  kernel.bind(
+    UserRepo,
+    vi.fn(class {
+      findById = vi.fn().mockResolvedValue({
+        id: "1",
+        name: "Alice"
+      })
+    })
+  )
+
+  kernel.bind(
+    BillingFacade,
+    vi.fn(class {
+      hasSubscription = vi.fn().mockResolvedValue(true)
+    })
+  )
+
+  const result = await ShowUserProfile
+    .withKernel(kernel)
+    .invoke("1")
+
+  expect(result).toEqual({
+    name: "Alice",
+    hasSubscription: true
+  })
+})
+```
+
+### Testing Benefits
+
+- **No module mocks** - Test classes, not file structures
+- **Framework agnostic** - Use any test runner (Vitest, Jest, Node's built-in test runner)
+- **Easy to refactor** - Move files around without breaking tests
+- **Clear dependencies** - Mock exactly what you need at the class level
+
+## Built-in Features
+
+Vla comes with useful features out of the box and aims to provide more over time.
+
+### Memoization for Data Access
+
+Automatically cache expensive operations within a single request. No need to manually track what's been fetched.
+
+```ts
+class UserRepo extends Vla.Repo {
+  db = this.inject(Database)
+
+  // Wrap with this.memo() to cache results per request
+  findById = this.memo((id: string) => {
+    console.log(`Fetching user ${id} from DB`)
+    return this.db.users.find({ id })
+  })
+}
+
+// In the same request:
+const user1 = await repo.findById("1") // "Fetching user 1 from DB"
+const user2 = await repo.findById("1") // (uses cached result, no console log)
+const user3 = await repo.findById("2") // "Fetching user 2 from DB"
+```
+
+Memoized methods also support utilities:
+
+```ts
+// Force fresh data, bypass cache
+const fresh = await repo.findById.fresh("1")
+
+// Preload cache in the background
+repo.findById.preload("1")
+
+// Manually set a cached value
+repo.findById.prime("1").value({ id: "1", name: "Alice" })
+
+// Clear cache for specific args
+repo.findById.bust("1")
+
+// Clear all cache
+repo.findById.bustAll()
+```
+
+### Stable Singletons in Dev Mode
+
+In hot-reload dev mode, singletons like database clients can get recreated on every change, causing connection pool exhaustion. Vla's `devStable()` prevents this.
+
+```ts
+class Database extends Vla.Resource {
+  static readonly unwrap = "db"
+
+  // In dev mode, reuses the same client across hot reloads
+  // In production, works like a normal singleton
+  db = this.devStable("db", () => new DatabaseClient())
+}
+```
+
+### Request Context
+
+Access request-specific data anywhere in your application without prop drilling.
+
+```ts
+// Define a context type
+const ReqContext = Vla.createContext<{
+  userId: string
+  cookies: Record<string, string>
+}>()
+
+// Set context in your middleware
+Vla.withKernel(
+  kernel.scoped().context(ReqContext, {
+    userId: req.cookies.userId,
+    cookies: req.cookies
+  }),
+  () => next()
+)
+
+// Access context anywhere in your classes
+class UserService extends Vla.Service {
+  ctx = this.inject(ReqContext)
+
+  async currentUser() {
+    const userId = this.ctx.userId
+    // ...
+  }
+}
+```
+
+### Per-Request Scoped State
+
+Classes scoped to `"invoke"` (like Services and Repos) are cached per request, letting you maintain stateful data throughout a single request's lifecycle.
+
+```ts
+class UserRepo extends Vla.Repo {
+  // This cache is unique per request
+  // This is a simplified reimplementation of the `this.memo()` helper
+  private cache = new Map<string, User>()
+
+  async findById(id: string) {
+    if (this.cache.has(id)) {
+      return this.cache.get(id)
+    }
+
+    const user = await this.db.users.find({ id })
+    this.cache.set(id, user)
+    return user
+  }
+}
+```
+
+## There's more to come
+
+Vla is actively developing more built-in features:
+
+- **Input validation** - Validate action inputs with schema libraries
+- **Error handling** - Unified error handling patterns
+- **Authorization logic** - Built-in patterns for permissions and access control
+- **Auto tracing** - Automatic request tracing and logging
+- _and more_
+
+---
+
+## Get Started
+
+Ready to add structure to your backend? Check out the [Getting Started guide](/guides/getting-started/) to start using Vla in your project.

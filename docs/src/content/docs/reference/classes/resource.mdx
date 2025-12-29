@@ -1,9 +1,11 @@
 ---
 title: Resource
-description: Understanding Resources in Vla's architecture
+description: Long-lived infrastructure clients
 ---
 
-Resources are long-lived infrastructure clients like database pools, cache connections, API clients or configuration objects.
+Resources are long-lived infrastructure clients like database pools, cache connections, API clients, or configuration objects.
+
+## Example
 
 ```ts
 class Database extends Vla.Resource {
@@ -22,16 +24,53 @@ class UserRepo extends Vla.Repo {
 }
 ```
 
-## When to use
+## When to Use
 
 - Database connections
-- cache clients
-- configuration singletons
+- Cache clients
+- Configuration singletons
 
-## Scope
+## Reference
 
-`singleton` (single instance forever)
+### Scope
 
-## Note
+`singleton` - Single instance created and cached forever.
+
+### Properties
+
+```ts
+static readonly scope = 'singleton'
+static readonly unwrap?: PropertyKey
+```
+
+### Special Property: unwrap
+
+The `unwrap` static property allows injectors to receive a specific property instead of the entire Resource instance.
+
+```ts
+class Database extends Vla.Resource {
+  static readonly unwrap = 'client'
+
+  client = new PrismaClient()
+}
+
+class UserRepo extends Vla.Repo {
+  // Injects the 'client' property directly, not the Database instance
+  db = this.inject(Database)
+
+  async findAll() {
+    return this.db.user.findMany() // this.db is PrismaClient
+  }
+}
+```
+
+### Characteristics
+
+- **Scope:** `singleton` (single instance forever)
+- **Purpose:** Database connections, cache clients, configuration
+- **Can inject:** Other Resources, Contexts
+- **Best practices:** Use for expensive-to-create resources; implement cleanup methods
+
+### Note
 
 Resources can be injected cross-module.

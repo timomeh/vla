@@ -1,0 +1,141 @@
+---
+title: Other Frameworks
+description: Integrate Vla with any framework
+---
+
+Vla works with any server-side TypeScript framework. Here's how to integrate it.
+
+## Install
+
+```bash
+npm install vla
+```
+
+## Core Integration Pattern
+
+The integration pattern for any framework follows these steps:
+
+### 1. Create a Kernel
+
+```ts
+// src/data/kernel.ts
+import { Kernel } from 'vla'
+
+export const kernel = new Kernel()
+```
+
+### 2. Set Up Request Scoping
+
+Create a scoped kernel for each request using your framework's middleware or hook system:
+
+```ts
+import { Vla } from 'vla'
+import { kernel } from './data/kernel'
+
+// In your request handler/middleware
+function handleRequest() {
+  return Vla.withKernel(kernel.scoped(), () => {
+    // Your request logic here
+  })
+}
+```
+
+### 3. Invoke Actions
+
+```ts
+class GetUser extends Vla.Action {
+  async handle(id: string) {
+    return { id, name: 'User' }
+  }
+}
+
+// In your route handler
+const user = await GetUser.invoke('123')
+```
+
+## Two Integration Approaches
+
+### Global Kernel Provider (Recommended for React-based frameworks)
+
+Use `Vla.setInvokeKernelProvider()` to provide a scoped kernel globally:
+
+```ts
+import { Vla } from 'vla'
+import { kernel } from './data/kernel'
+
+Vla.setInvokeKernelProvider(() => {
+  return kernel.scoped()
+})
+
+// Now you can invoke actions anywhere
+const user = await GetUser.invoke('123')
+```
+
+For frameworks with request caching (like React's `cache()`):
+
+```ts
+import { cache } from 'react'
+import { Vla } from 'vla'
+import { kernel } from './data/kernel'
+
+Vla.setInvokeKernelProvider(
+  cache(() => {
+    return kernel.scoped()
+  })
+)
+```
+
+### Middleware Pattern (Recommended for traditional servers)
+
+Use `Vla.withKernel()` in middleware:
+
+```ts
+import { Vla } from 'vla'
+import { kernel } from './data/kernel'
+
+app.use((req, res, next) => {
+  Vla.withKernel(kernel.scoped(), next)
+})
+```
+
+## Adding Request Context
+
+To access framework-specific request data (cookies, headers, etc.):
+
+```ts
+// 1. Create a context
+import { Vla } from 'vla'
+
+export const AppContext = Vla.createContext<{
+  request: YourFrameworkRequest
+}>()
+
+// 2. Provide it when creating scoped kernel
+Vla.setInvokeKernelProvider(() => {
+  return kernel.scoped().context(AppContext, {
+    request: getCurrentRequest()
+  })
+})
+
+// Or in middleware:
+app.use((req, res, next) => {
+  Vla.withKernel(
+    kernel.scoped().context(AppContext, { request: req }),
+    next
+  )
+})
+
+// 3. Use in your classes
+class GetCurrentUser extends Vla.Action {
+  ctx = this.inject(AppContext)
+
+  async handle() {
+    // Access request data
+    const sessionId = this.ctx.request.cookies.get('session_id')
+  }
+}
+```
+
+## That's It
+
+The key is to ensure a new scoped kernel is created for each request. Once that's set up, you're ready to use Vla. Check out the [guides](/guides/actions/) to learn how to structure your code with Actions, Services, and Repos.
