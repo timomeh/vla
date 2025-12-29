@@ -9,7 +9,7 @@ Vla structures your backend with common patterns that enforce clean code depende
 
 Vla organizes code into **layers** that flow in a single direction. Higher layers can use lower layers, but not vice versa.
 
-![](./src/assets/layers.png)
+![](../../../assets/layers.png)
 
 Each layer has its own concern and doesn't need to know about other concerns.
 
@@ -85,7 +85,7 @@ class UserFacade extends Users.Facade {
 }
 ```
 
-![](./src/assets/modules.png)
+![](../../../assets/modules.png)
 
 <Aside>
 If you have a smaller app, you might not need multiple modules at all. A module is a domain that can consist of multiple resources. While you can create separate modules for each resource, you do not need to.
