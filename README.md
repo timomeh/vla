@@ -1,426 +1,81 @@
 <p align="center">
   <img src=".github/logo-large.png" width="400px" align="center" alt="Vla Logo" />
-  <h1 align="center">Vla – Smooth TypeScript Backends</h1>
+  <h1 align="center">Vla</h1>
+  <h3 align="center"><em>Makes TypeScript Backends sooo smooth</em></h3>
   <p align="center">
     Vla is the missing backend layer for scalable TypeScript apps that integrates into any framework and existing codebases.
   </p>
 </p>
 <br/>
 
-🚧 WIP, under development. Exports and names will very likely change often.
+> _Vla is currently in beta._
 
-- Dependency Injection without decorators and without reflection
-- Works in any server-side framework
-- Write code that's easy to test without module mocks all over the place
-- Structures code into modules, layers and interfaces
-- Familiar patterns: Actions, Services, Repos, Facades
-- Ensures that Facades are used for cross-module dependencies to prevent messy code dependencies
-- Tree shakeable
-- Memoziation for Repos
-- request-based context with AsyncLocalStorage
-- first-class context injection
-- 🏗️ auto tracing
-- 🏗️ input validation
-- 🏗️ error handling
-- ...
+## What is Vla?
 
-## Install
+Vla structures your backend code with clear layers and dependency injection, without decorators or reflection. It works alongside your framework (Next.js, SvelteKit, Express, etc.) to organize your data layer with familiar patterns: Actions, Services, Repos, and Resources.
 
-```console
+```ts
+class ShowUserProfile extends Vla.Action {
+  service = this.inject(UserService)
+
+  async handle(userId: string) {
+    return this.service.getProfile(userId)
+  }
+}
+
+class UserService extends Vla.Service {
+  repo = this.inject(UserRepo)
+  billing = this.inject(BillingFacade)
+
+  async getProfile(userId: string) {
+    const user = await this.repo.findById(userId)
+    const hasSubscription = await this.billing.hasSubscription(userId)
+
+    return { ...user, hasSubscription }
+  }
+}
+
+class UserRepo extends Vla.Repo {
+  db = this.inject(Database)
+
+  // Built-in memoization per request
+  findById = this.memo((id: string) => {
+    return this.db.users.find({ id })
+  })
+}
+```
+
+## Features
+
+- **Framework Agnostic** – Works with Next.js, SvelteKit, Express, Koa, and any TypeScript framework
+- **Clear Architecture** – Actions, Services, Repos, Resources, and Facades for organized code
+- **Clean Dependency Injection** - No decorators, no reflection, just `this.inject()`
+- **Built-in Memoization** – Automatic request-scoped caching for database queries
+- **Easy Testing** – Test classes, not file paths—no more brittle module mocks
+- **Module System** – Scale to large apps with domain-separated modules and Facades
+- **Request Context** – First-class context injection with AsyncLocalStorage
+- **Tree Shakeable** – Only bundle what you use
+
+## Why Vla?
+
+Fullstack TypeScript frameworks excel at the frontend: routing, rendering, server actions, but leave the backend data layer unstructured. Without conventions, codebases become messy:
+
+- Unclear separation between business logic and data access
+- Testing requires module mocks that leak file paths into tests
+- Code dependencies become tangled as the app grows
+
+**Vla fills this gap.** It provides structure and conventions for your data layer without replacing your framework. It's a library, not a framework. No HTTP server, no build tools, just patterns that scale.
+
+## Installation
+
+```bash
 npm install vla
 ```
 
-## Why?
+## [Documentation](https://vla.run/guides/installation/)
 
-Many fullstack frameworks lack structure and conventions on the backend side (data layer), but they have lots of good structure and conventions on the frontend side (presentation layer). They are still great frameworks and they all have their own strengths. This is where Vla comes in. It aims to fill in the missing gap in the data layer, allowing you to write well-structured maintainable, scalable and testable code.
+Check out [vla.run](https://vla.run) for guides, references and framework integrations.
 
-## Usage
+## License
 
-```ts
-import { Kernel, Vla } from "vla"
-
-// Create a Users module.
-// Modules are optional and helpful for larger apps.
-// Smaller apps might only need a single module.
-// You can use the provided `Vla.Action`, `Vla.Service` etc as shortcuts
-// instead of creating your own module
-const Users = Vla.createModule("Users")
-
-class ShowUserSettings extends Users.Action {
-  users = this.inject(UserService)
-
-  async handle(userId: string) {
-    const settings = await this.users.getSettings(userId)
-    return {
-      timezone: settings.timezone,
-      hasSubscription: settings.hasSubscription
-    }
-  }
-}
-
-class UserService extends Users.Service {
-  repo = this.inject(UserRepo)
-  billing = this.inject(BillingFacade)
-  session = this.inject(SessionFacade)
-
-  async getSettings(userId: string) {
-    await canViewProfile(userId)
-
-    const profile = await this.repo.findById(userId)
-    const hasSubscription = await this.billing.hasSubscription(userId)
-
-    return {
-      ...profile,
-      hasSubscription
-    }
-  }
-
-  private async canViewProfile(userId: string) {
-    const isSameUser = this.ctx.currentUser.id !== userId
-    if (!isSameUser) throw new Forbidden()
-
-    // repo method calls are memoized
-    const profile = await this.repo.findById(userId)
-    const currentUser = await this.session.currentUser()
-    const isTeamAdmin =
-      currentUser.role === "admin" &&
-      currentUser.teamId === profile.teamId
-
-    if (!isTeamAdmin) throw new Forbidden()
-  }
-}
-
-class SessionFacade extends Users.Service {
-  ctx = this.inject(ReqContext)
-  repo = this.inject(UserRepo)
-
-  async currentUser() {
-    const currentUserId = cookies.userId
-    const user = await this.repo.findById(currentUserId)
-    return user
-  }
-}
-
-class UserRepo extends Users.Repo {
-  db = this.inject(Database)
-
-  findById = this.memo((id: string) => {
-    // this method is memoized per request.
-    // memoized methods can be called like any normal method, but
-    // if it's called multiple times with the same args, it's only
-    // executed once and the result is cached
-    return this.db.users.find({ id })
-  })
-
-  async create(data: UserValues) {
-    const createdUser = await this.db.users.create({ data })
-
-    this.findById.prime(createUser.id).value(createdUser)
-    // memoized methods support multiple utilities:
-    // - .fresh(args) to skip memoized cache and execute the function again
-    // - .prime(args).value({ ... }) to set a cached value
-    // - .preload(args) to run the method in the background and preload the cache
-    // - .bust(args) to bust the cache for the provided args
-    // - .bustAll() to bust the cache for all args
-
-    return createdUser
-  }
-}
-
-class Database extends Vla.Resource {
-  static readonly unwrap = "db"
-  // Unwraps a property when injecting the resource:
-  // When another class injects the database with `this.inject(Database)`,
-  // the `unwrap` will cause that it doesn't return the instance of the
-  // Database class, but the `db` property of it.
-  // This prevents that you have to write stuff like `this.db.db.find()`
-
-  // `Resource` classes are singletons,
-  // so the client this will only be initialized once
-  db = new DbClient()
-}
-
-// Billing
-const Billing = Vla.createModule("Billing")
-
-class BillingFacade extends Billing.Facade {
-  repo = this.inject(BillingRepo)
-
-  async hasSubscription(userId: string) {
-    const subscription = await this.repo.findSubscriptionByUser(userId)
-    return Boolean(subscription)
-  }
-}
-
-class BillingRepo extends BillingModule.Repo {
-  async findSubscriptionByUser(userId: string) {
-    return db.subscriptions.find({ userId })
-  }
-}
-
-// Supports injecting context
-const ReqContext = Vla.createContext<{ cookies: Record<string, unknown> }>()
-
-const kernel = new Kernel()
-Vla.setGlobalInvokeKernel(kernel) // define as global instance
-
-// just an example. you should use a scoped context instead (see below)
-kernel.context(ReqContext, { cookies: req.cookies })
-
-const settings = await ShowUserSettings.invoke(userId)
-// -> { timezone: 'GMT+1', hasSubscription: true }
-```
-
-### React usage
-
-```tsx
-import { cache } from 'react'
-import { Vla } from 'vla'
-import { kernel } from '@/data/kernel'
-
-const kernel = new Kernel()
-
-// React's cache() will return a new scoped kernel for each request
-Vla.setInvokeKernelProvider(cache(() => {
-  return kernel
-    .scoped()
-    .context(ReqContext, {
-      // you can either use await cookies() here or await the promise in Vla
-      cookies: cookies()
-    })
-}))
-
-async function Layout() {
-  const settings = await ShowUserSettings.invoke(userId)
-
-  return <div><Page /></div>
-}
-
-async function Page() {
-  const settings = await ShowUserSettings.invoke(userId)
-  // it will not query the db twice. it will use the memoized db query
-
-  return (
-    <ul>
-      <li>Timezone: {settings.timezone}</li>
-      <li>Subscriber: {settings.hasSubscription ? "yes" : "no"}</li>
-    </ul>
-  )
-}
-```
-
-### In any middleware-based app
-
-e.g. sveltekit
-
-```ts
-import { Vla } from "vla"
-import type { Handle } from "@sveltejs/kit"
-import { kernel } from '@/data/kernel'
-
-export const handle: Handle = async ({ event, resolve }) => {
-  return Vla.withKernel(kernel.scoped(), () => resolve(event))
-}
-
-import { kernel } from '@/data/kernel';
-import type { PageServerLoad } from './$types';
-
-export const load: PageServerLoad = async ({ params }) => {
-  return {
-    settings: await ShowUserSettings.invoke(userId)
-  }
-}
-```
-
-e.g. express
-
-```ts
-import { Vla } from "vla"
-import { kernel } from '@/data/kernel'
-
-const app = express()
-
-express.use((req, res, next) => {
-  const scope = kernel.scoped().context(CustomContext, { req })
-  return Vla.withKernel(scope, () => next())
-})
-
-app.get("/users/:id", async (req, res) => {
-  const settings = await ShowUserSettings.invoke(req.params.id)
-  res.json({ data: settings })
-})
-```
-
-### Testing
-
-```ts
-test("returns some user settings", async () => {
-  const kernel = new Kernel()
-
-  // mocks for database calls
-  kernel.bind(
-    UserRepo,
-    vi.fn(
-      class {
-        findById = vi.fn().mockResolvedValue({ timezone: "faked" })
-      },
-    ),
-  )
-
-  // mocks for cross-module dependencies
-  kernel.bind(
-    BillingFacade,
-    vi.fn(
-      class {
-        hasSubscription = vi.fn().mockResolvedValue(true)
-      },
-    ),
-  )
-
-  // mock a context
-  kernel.bindValue(
-    ReqContext,
-    { cookies: { currentUserId: 1 }}
-  )
-
-  await expect(ShowUserSettings.withKernel(kernel).invoke("1")).resolves.toEqual({
-    timezone: "faked",
-    hasSubscription: true
-  })
-})
-```
-
-## Docs
-
-There aren't any docs yet. This section is just jotting down some notes for myself.
-
-### When to use modules?
-
-You don't need to create a module for each separate resource. Modules are meant for domain separation, not necessarily for resources. A module can have multiple services, repositories and even multiple facades to separate resources from each other.
-
-Smaller apps may just need a single module for the whole app. You can use `Vla.Action`, `Vla.Repo`, `Vla.Service` etc as a shortcut.
-
-### What's a facade, when to use it?
-
-Facades are meant as the internal public API to a module, for other modules.
-
-When one module wants to use something from another module, it should do so by loading a facade, and not by deeply calling a service or repository of a module. Even though this adds a layer of indirection, it lets you better differentiate between internal and external concerns of a module, and prevents code dependencies from becoming messy. If you use facades excessively often, your domain modelling could be improved.
-
-Vla prevents that any module can deeply inject any arbitrary class from another module. It only allows injecting Resources and Facades from other modules.
-
-### How should I structure files and folders?
-
-Roughly follow how Vla structures your code:
-
-- Use separate folders for separate modules
-- Create a separate file for each Service, Repo, Facade, Action
-- If you further want to group files inside a module, do it either by resource (`user`, `post`, etc) or by type (`services`, `repos`, `actions`, etc). Start by having a flat hierarchy with all files of a module in a single folder, and separate into multiple folders once you feel it grows too much.
-
-"How to structure code into files and folders" is often a question of how to manage code dependencies in a way that scales well. Vla's structure already manages your code dependencies, so it makes sense to align your files and folders on Vla's structure.
-
-### Class scopes
-
-Vla uses dependency injection to load and use classes in other classes. This means that Vla creates class instances for you and caches them in different caches for different lifetimes. Whenever you call `inject()`, Vla checks the scope of the class and whether an instance is already cached.
-
-There are 3 different scopes:
-
-- `transient` creates a new instance every time, it does not use a cached instance
-- `invoke` creates a new instance per request handler and reuses this cached instance within the request. 
-- `singleton` creates a new instance only once and caches it forever
-
-Example:
-
-```ts
-class DatabasePool extends MyModule.Resource {
-  // Resources are Singletons.
-  // Singletons are cached globally
-  private dbPool: DbPool | null = null
-
-  get dbPool() {
-    return this.dbPool || new DbPool()
-  }
-}
-
-class Repo extends MyModule.Repo {
-  // repos are cached per request ("invoke" scope),
-  // so this map will be stateful for the current request scope
-  private cache = Map<string, User>()
-
-  dbPool = this.inject(DatabasePool)
-
-  async findById(id: string) {
-    const cached = this.cache.get(id)
-    if (cached) return cached
-
-    const user = await dbPool.user.find({ id })
-    this.cache.set(id, user)
-    return user
-  }
-}
-
-class ServiceA extends MyModule.Service {
-  repo = this.inject(Repo)
-  // This repo instance is exactly the same instance as in ServiceB,
-  // so they both share the same `.cache`
-
-  async doSomething() {
-    await this.repo.findById("1")
-  }
-}
-
-class ServiceB extends MyModule.Service {
-  repo = this.inject(Repo)
-  // This repo instance is exactly the same instance as in ServiceA,
-  // so they both share the same `.cache`
-
-  async doOtherThing() {
-    await this.repo.findById("1")
-  }
-}
-```
-
-In this example:
-- The `DatabasePool` will only be created once and will be reused forever
-- The `Repo` will be stateful for each request. A new instance will be created for each request, and reused for the lifetime of the request.
-- Both `ServiceA` and `ServiceB` will share the exact same `Repo` instance during a request.
-
-### Overriding class scopes
-
-```ts
-class FooService extends MyModule.Service {
-  static scope = FooClass.ScopeTransient
-  // Services have a "invoke" scope by default. This overrides it to be
-  // "transient" instead. Transient classes get created separately for
-  // each usage and aren't cached at all.
-}
-```
-
-### Defining scope when injecting a class
-
-Example:
-
-```ts
-class FooRepo extends MyModule.Repo {
-  async foo() {}
-}
-
-class FooService extends MyModule.Service {
-  repo = this.inject(FooRepo, "transient")
-}
-```
-
-This will use a transient version of the FooRepo only inside the `FooService`. Meaning this service won't share the same cached version that other services might be using.
-
-It's not something you'll likely need to use often. But this shows how the scope defines how long the instance should be cached and shared.
-
-### Base classes
-
-Vla gives you multiple base classes with semantic names. You can use them as they are, or extend them for your own custom base classes.
-
-- `Action` for server-side entry points (scope: `transient`)
-- `Service` for reusable units of code (scope: `invoke`)
-- `Repo` for data access and external adapters (scope: `invoke`)
-- `Resource` for long-lived infrastructure clients such as database pools (scope: `singleton`)
-- `Facade` for the interface of a module for cross-module access (scope: `transient`)
-
-Facades and Actions are similar in the way that they provide an interface into the module. The difference is that Actions are meant to be invoked from outside of a module, while Facades are meant to be called from inside of a module.
+MIT
