@@ -49,7 +49,7 @@ The `unwrap` static property allows injectors to receive a specific property ins
 
 ```ts
 class Database extends Vla.Resource {
-  static readonly unwrap = 'client'
+  static readonly unwrap = "client"
 
   client = new PrismaClient()
 }
