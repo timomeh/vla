@@ -1,8 +1,11 @@
-# Vla
-
-_A smooth dutch dessert that goes with everything._
-
-A TypeScript data layer kernel for backend- and fullstack apps. Compatible with whatever framework or library you're using.
+<p align="center">
+  <img src=".github/logo-large.png" width="400px" align="center" alt="Vla Logo" />
+  <h1 align="center">Vla – Smooth TypeScript Backends</h1>
+  <p align="center">
+    Vla is the missing backend layer for scalable TypeScript apps that integrates into any framework and existing codebases.
+  </p>
+</p>
+<br/>
 
 🚧 WIP, under development. Exports and names will very likely change often.
 
