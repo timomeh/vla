@@ -1,5 +1,6 @@
 // @ts-check
 
+import node from "@astrojs/node"
 import starlight from "@astrojs/starlight"
 import { defineConfig } from "astro/config"
 
@@ -97,4 +98,9 @@ export default defineConfig({
       ],
     }),
   ],
+
+  output: "server",
+  adapter: node({
+    mode: "standalone",
+  }),
 })
