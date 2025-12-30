@@ -90,6 +90,11 @@ class Logger extends Vla.Service {
   static readonly scope = Logger.ScopeTransient
   // or Logger.ScopeInvoke
   // or Logger.ScopeSingleton
+
+  // Yes, the scope is on the class through the parent class.
+  // Vla aims to provide self-contained functionality to reduce the amount of
+  // stuff you need to import. So you can see more of your own imports and
+  // less library imports.
 }
 ```
 
