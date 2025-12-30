@@ -3,9 +3,11 @@
 import node from "@astrojs/node"
 import starlight from "@astrojs/starlight"
 import { defineConfig } from "astro/config"
+import starlightLlmsTxt from "starlight-llms-txt"
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://vla.run/",
   integrations: [
     starlight({
       title: "Vla",
@@ -26,6 +28,7 @@ export default defineConfig({
           href: "https://www.npmjs.com/package/vla",
         },
       ],
+      plugins: [starlightLlmsTxt()],
       customCss: ["./src/styles/custom.css"],
       favicon: "/favicon.svg",
       head: [
