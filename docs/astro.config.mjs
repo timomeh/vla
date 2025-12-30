@@ -114,6 +114,27 @@ export default defineConfig({
             sizes: "180x180",
           },
         },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image",
+            content: "/og.png",
+          },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image:width",
+            content: "1200",
+          },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image:width",
+            content: "630",
+          },
+        },
       ],
       sidebar: [
         {
