@@ -106,7 +106,7 @@ export default defineConfig({
         {
           label: "Framework Integration",
           items: [
-            { label: "Next.js", slug: "frameworks/next-js" },
+            { label: "Next.js", slug: "frameworks/nextjs" },
             { label: "SvelteKit", slug: "frameworks/sveltekit" },
             { label: "React Router", slug: "frameworks/react-router" },
             {
@@ -123,7 +123,6 @@ export default defineConfig({
         },
         {
           label: "Reference",
-          collapsed: true,
           items: [
             { label: "Vla Namespace", slug: "reference/vla" },
             { label: "Kernel", slug: "reference/kernel" },
