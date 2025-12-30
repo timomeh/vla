@@ -269,60 +269,6 @@ class PostService extends Vla.Service {
 }
 ```
 
-### Feature Flags
-
-Use context to provide feature flag information:
-
-```ts
-const FeatureContext = Vla.createContext<{
-  flags: Record<string, boolean>
-}>()
-
-class FeatureService extends Vla.Service {
-  ctx = this.inject(FeatureContext)
-
-  isEnabled(flag: string): boolean {
-    return this.ctx.flags[flag] ?? false
-  }
-}
-
-class PostService extends Vla.Service {
-  features = this.inject(FeatureService)
-
-  async createPost(data: PostData) {
-    if (this.features.isEnabled('rich-text')) {
-      // Handle rich text posts
-    } else {
-      // Handle plain text posts
-    }
-  }
-}
-```
-
-### Request Tracing
-
-Use context for request IDs and tracing:
-
-```ts
-const TraceContext = Vla.createContext<{
-  requestId: string
-  startTime: number
-}>()
-
-class Logger extends Vla.Service {
-  ctx = this.inject(TraceContext)
-
-  log(message: string, data?: any) {
-    console.log({
-      requestId: this.ctx.requestId,
-      duration: Date.now() - this.ctx.startTime,
-      message,
-      ...data
-    })
-  }
-}
-```
-
 ## Context vs. Direct Kernel Bindings
 
 You can also bind values directly to the kernel:
@@ -407,9 +353,3 @@ const AppContext = Vla.createContext<{
 ```
 
 Instead, split into multiple contexts or use services.
-
-## Next Steps
-
-- [Framework Integration](/guides/framework-integration/) - Deep dive into framework-specific patterns
-- [Testing](/guides/testing/) - Mock context in tests
-- [Best Practices](/guides/best-practices/) - Architecture patterns
