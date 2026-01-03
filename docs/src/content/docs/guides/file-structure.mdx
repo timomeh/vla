@@ -40,13 +40,13 @@ Colocate [Actions](/reference/classes/action) in your presentation layer (next t
 Think of each `data.ts` file like it defines a module boundary in your presentation layer:
 
 - Files inside a folder should only import from their closest `data.ts`.
-- Keep your `components` folder as a reusable component library, which doen't fetch data from the data layer.
+- Keep your `components` **data-free**, as a collection of reusable UI components which don't fetch data from the data layer.
 
 For example, using the file structure from above:
 
 - `posts/page.ts` and `/posts/[slug]/page.ts` would only import from `posts/data.ts`. They would not import from `authors/`.
 - `authors/page.ts` would only import from `authors/data.ts`, and not from `posts/data.ts` or `authors/[users]/data.ts`.
-- `authors/[user]/page.ts` would only import from `authors/[user]/page.ts`, and not from `posts/data.ts` or `authors/data.ts`.
+- `authors/[user]/page.ts` would only import from `authors/[user]/data.ts`, and not from `posts/data.ts` or `authors/data.ts`.
 
 <Aside type="tip">
 Most apps won't need to have a `data.ts` file for each folder. Start with a `data.ts` in your presentation layer root, and create another one when you feel like you want to group actions.
