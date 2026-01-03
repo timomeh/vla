@@ -9,7 +9,7 @@ This page provides recommendations based on your app's size and complexity.
 
 ---
 
-## File per Resource
+## File per Model
 
 For small apps or prototypes, keep it simple. A handful of files in a single folder is often enough.
 
@@ -22,38 +22,38 @@ import { FileTree } from '@astrojs/starlight/components';
   - **data/**
     - **users.ts**
     - **posts.ts**
+    - db.ts
     - kernel.ts *Kernel setup*
 
 </FileTree>
 import { Aside } from '@astrojs/starlight/components';
 
-## Folder per Layer
+## Folder per Model
 
-When your app grows beyond a few classes, organize files by **layer** (Actions, Services, Repos) using naming conventions or folders.
+When your app grows beyond a few classes, organize files by their model (e.g. database resource).
 
 <FileTree>
 
 - src/
   - app/
   - **data/**
-    - kernel.ts
-    - db.ts
-    - **actions/**
-      - listPosts.ts
-      - showPost.ts
-      - showUserProfile.ts
-    - **services/**
-      - postsService.ts
-      - usersService.ts
-    - **repos/**
-      - postsRepo.ts
-      - usersRepo.ts
+    - **resources/** *Keep clients global*
+      - db.ts
+      - redis.ts
+    - **posts/**
+      - posts.service.ts
+      - posts.repo.ts
+      - posts.actions.ts
+    - **users/**
+      - users.service.ts
+      - users.repo.ts
+      - users.actions.ts
 
 </FileTree>
 
 ## Folder per Module
 
-For large apps or teams, organize by **modules** to separate domains. Each module has its own directory with its layers inside.
+For large apps or teams, organize by **modules** to separate domains. Each module has its own directory with its own structure inside.
 
 <FileTree>
 
@@ -107,9 +107,9 @@ Keep everything flat within the module directory.
 
 </FileTree>
 
-### Group by Resource
+### Group by Model
 
-Group by resource when the module has multiple resources.
+Group by model when the module has multiple models.
 
 <FileTree>
 
@@ -126,32 +126,6 @@ Group by resource when the module has multiple resources.
     - **payment/**
       - payment.service.ts
       - payment.repo.ts
-
-</FileTree>
-
-### Group by Layer
-
-Group by layer type when there are many files.
-
-<FileTree>
-
-- data/
-  - **users/**
-    - user.module.ts
-    - user.facade.ts
-    - auth.facade.ts
-    - **actions/**
-      - user.actions.ts
-      - auth.actions.ts
-      - profile.actions.ts
-    - **services/**
-      - user.service.ts
-      - auth.service.ts
-      - profile.service.ts
-    - **repos/**
-      - user.repo.ts
-      - session.repo.ts
-      - profile.repo.ts
 
 </FileTree>
 
