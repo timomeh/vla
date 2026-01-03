@@ -13,7 +13,7 @@ import { FileTree, Aside } from '@astrojs/starlight/components';
 
 ## Action Files in your Presentation Layer
 
-Colocate [Actions](/reference/classes/action) in your presentation layer (next to your UI components) in a separate file. Create a `data.ts` file for each group of files, which belong together. Create multiple actions in this `data.ts`.
+Colocate [Actions](/reference/classes/action) in your presentation layer (next to your UI components) in a separate file. Create a `data.ts` file for each group of files, which belong together. This file contains one or more Vla Actions, but no other layers (like Services, Repos or Resources).
 
 <FileTree>
 - src/
@@ -41,6 +41,7 @@ Think of each `data.ts` file like it defines a module boundary in your presentat
 
 - Files inside a folder should only import from their closest `data.ts`.
 - Keep your `components` **data-free**, as a collection of reusable UI components which don't fetch data from the data layer.
+- You can also choose a different file name, like `actions.ts`.
 
 For example, using the file structure from above:
 
