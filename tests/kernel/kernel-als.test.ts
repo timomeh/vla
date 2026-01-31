@@ -1,5 +1,5 @@
 import { beforeEach, expect, test, vi } from "vitest"
-import { Kernel, Vla } from "../src"
+import { Kernel, Vla } from "../../src"
 
 const users: Record<string, { id: string; name: string }> = {
   "1": { id: "1", name: "John" },

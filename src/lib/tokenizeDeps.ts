@@ -1,4 +1,4 @@
-import type { InstantiableClass, Scope } from "./types"
+import type { InstantiableClass, Scope } from "../types"
 
 class UnresolvedDependency<TClass extends InstantiableClass<unknown>> {
   constructor(
