@@ -1,5 +1,8 @@
 import { createContext, createModule } from "./factories"
 import {
+  getKernelFromContext,
+  getKernelFromGlobal,
+  getKernelFromProvider,
   Kernel,
   setGlobalInvokeKernel,
   setInvokeKernelProvider,
@@ -15,6 +18,11 @@ export const Vla = {
   createModule,
   createContext,
   withKernel,
+  getKernel: {
+    fromContext: getKernelFromContext,
+    fromGlobal: getKernelFromGlobal,
+    fromProvider: getKernelFromProvider,
+  },
   setGlobalInvokeKernel,
   setInvokeKernelProvider,
   Kernel,

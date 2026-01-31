@@ -6,6 +6,6 @@ export function setGlobalInvokeKernel(kernel: Kernel) {
   globalKernel = kernel
 }
 
-export function getGlobalKernel() {
+export function getKernelFromGlobal() {
   return globalKernel
 }

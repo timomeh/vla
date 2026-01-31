@@ -7,6 +7,6 @@ export function withKernel<T>(scopedKernel: Kernel, fn: () => T): T {
   return als.run(scopedKernel, fn)
 }
 
-export function getAlsInvokeKernel() {
+export function getKernelFromContext() {
   return als.getStore() ?? null
 }

@@ -1,4 +1,7 @@
 export { Kernel } from "./kernel"
-export { withKernel } from "./scoped-als"
-export { setGlobalInvokeKernel } from "./scoped-global"
-export { setInvokeKernelProvider } from "./scoped-provider"
+export { getKernelFromContext, withKernel } from "./scoped-als"
+export { getKernelFromGlobal, setGlobalInvokeKernel } from "./scoped-global"
+export {
+  getKernelFromProvider,
+  setInvokeKernelProvider,
+} from "./scoped-provider"

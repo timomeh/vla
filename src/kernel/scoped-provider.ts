@@ -7,6 +7,6 @@ export function setInvokeKernelProvider(fn: CurrentKernelFn) {
   currentKernelFn = fn
 }
 
-export async function getKernelProvider() {
-  return currentKernelFn ? await currentKernelFn() : undefined
+export async function getKernelFromProvider() {
+  return currentKernelFn ? await currentKernelFn() : null
 }

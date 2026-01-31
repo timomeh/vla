@@ -187,3 +187,81 @@ app.use((req, res, next) => {
 - Framework middleware
 - Wrapping request handlers
 - Setting kernel for a specific execution context
+
+### getKernel.fromContext()
+
+```ts
+Vla.getKernel.fromContext(): Kernel | null
+```
+
+Get the current kernel context from AsyncLocalStorage.
+
+**Example:**
+
+```ts
+import { Vla } from 'vla'
+
+app.use((req, res, next) => {
+  const scoped = kernel.scoped()
+  Vla.withKernel(scoped, () => next())
+})
+
+class Action extends Vla.Action {
+  async handle() {
+    const kernel = Vla.getKernel.fromContext()
+        // ^ the scoped kernel from the middleware
+  }
+}
+```
+
+### getKernel.fromGlobal()
+
+```ts
+Vla.getKernel.fromGlobal(): Kernel | null
+```
+
+Get the current kernel set from `setGlobalInvokeKernel()`.
+
+**Example:**
+
+```ts
+import { Kernel, Vla } from 'vla'
+
+const kernel = new Kernel()
+Vla.setGlobalInvokeKernel(kernel)
+
+class Action extends Vla.Action {
+  async handle() {
+    const kernel = Vla.getKernel.fromGlobal()
+        // ^ the kernel passed into setGlobalInvokeKernel
+  }
+}
+```
+
+### getKernel.fromProvider()
+
+```ts
+Vla.getKernel.fromProvider(): Promise<Kernel | null>
+```
+
+Get the current kernel set from `setInvokeKernelProvider()`.
+
+**Example:**
+
+```ts
+import { Kernel, Vla } from 'vla'
+import { cache } from 'react'
+
+const rootKernel = new Kernel()
+
+Vla.setInvokeKernelProvider(
+  cache(() => rootKernel.scoped())
+)
+
+class Action extends Vla.Action {
+  async handle() {
+    const kernel = await Vla.getKernel.fromProvider()
+        // ^ the current kernel returned from cache(() => ...)
+  }
+}
+```
