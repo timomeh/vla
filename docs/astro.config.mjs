@@ -1,6 +1,5 @@
 // @ts-check
 
-import node from "@astrojs/node"
 import starlight from "@astrojs/starlight"
 import { defineConfig } from "astro/config"
 import starlightLlmsTxt from "starlight-llms-txt"
@@ -206,11 +205,6 @@ export default defineConfig({
       ],
     }),
   ],
-
-  output: "server",
-  adapter: node({
-    mode: "standalone",
-  }),
   server: {
     host: "0.0.0.0",
   },
