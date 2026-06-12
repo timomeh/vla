@@ -49,6 +49,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -60,18 +61,13 @@ jobs:
 
       - name: Trigger deploy
         env:
-          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          GH_TOKEN: ${{ secrets.HILLSIDE_DISPATCH_TOKEN }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
         run: |
-          payload=$(jq -n \
-            --arg ref "$GITHUB_REF" \
-            --arg sha "$GITHUB_SHA" \
-            --arg message "$COMMIT_MESSAGE" \
-            '{ref: $ref, head_commit: {id: $sha, message: $message}}')
-
-          curl -fsSL \
-            -X POST \
-            -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: push" \
-            -d "$payload" \
-            "$DEPLOY_URL"
+          gh api \
+            --method POST \
+            /repos/timomeh/hillside/dispatches \
+            -f event_type=deploy-app \
+            -f client_payload[app]=maemecke \
+            -f client_payload[environment]=prod \
+            -f client_payload[image]="$IMAGE"
